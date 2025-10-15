@@ -285,16 +285,14 @@ with tab1:
                     # Создаем запись мониторинга
                     monitoring = PhytosanitaryMonitoring(
                         field_id=selected_field.id,
-                        monitoring_date=monitoring_date,
-                        crop=crop,
-                        growth_stage=growth_stage,
-                        problem_type=problem_type,
-                        problem_name=problem_name,
-                        severity=severity,
-                        affected_area_percent=affected_area_percent,
-                        intensity=intensity,
-                        treatment_required=treatment_required,
-                        weather_conditions=weather_conditions if weather_conditions else None,
+                        inspection_date=monitoring_date,
+                        pest_type=problem_type,
+                        pest_name=problem_name,
+                        severity_pct=affected_area_percent,
+                        prevalence_pct=affected_area_percent,
+                        intensity_score=intensity,
+                        threshold_exceeded=treatment_required,
+                        crop_stage=growth_stage,
                         photo_url=photo_url if photo_url else None,
                         gps_lat=gps_lat if gps_lat else None,
                         gps_lon=gps_lon if gps_lon else None,
@@ -354,13 +352,13 @@ with tab2:
         query = query.filter(Field.field_code == field_code)
 
     if filter_type != "Все типы":
-        query = query.filter(PhytosanitaryMonitoring.problem_type == filter_type)
+        query = query.filter(PhytosanitaryMonitoring.pest_type == filter_type)
 
     if filter_year != "Все годы":
         from sqlalchemy import extract
-        query = query.filter(extract('year', PhytosanitaryMonitoring.monitoring_date) == filter_year)
+        query = query.filter(extract('year', PhytosanitaryMonitoring.inspection_date) == filter_year)
 
-    monitorings = query.order_by(PhytosanitaryMonitoring.monitoring_date.desc()).all()
+    monitorings = query.order_by(PhytosanitaryMonitoring.inspection_date.desc()).all()
 
     if monitorings:
         st.metric("Всего обследований", len(monitorings))
@@ -369,14 +367,14 @@ with tab2:
         data = []
         for mon, field in monitorings:
             data.append({
-                "Дата": format_date(mon.monitoring_date),
+                "Дата": format_date(mon.inspection_date),
                 "Поле": f"{field.field_code} - {field.name}",
-                "Культура": mon.crop,
-                "Тип": mon.problem_type,
-                "Проблема": mon.problem_name,
-                "Степень": mon.severity,
-                "Распространение": f"{mon.affected_area_percent}%",
-                "Требует обработки": "⚠️ Да" if mon.treatment_required else "✅ Нет"
+                "Фаза": mon.crop_stage or "-",
+                "Тип": mon.pest_type,
+                "Проблема": mon.pest_name,
+                "Степень пораж. (%)": f"{mon.severity_pct or 0:.1f}",
+                "Распространение (%)": f"{mon.prevalence_pct or 0:.1f}",
+                "Превышен порог": "⚠️ Да" if mon.threshold_exceeded else "✅ Нет"
             })
 
         df = pd.DataFrame(data)
@@ -397,10 +395,10 @@ with tab2:
 
         col1, col2, col3, col4 = st.columns(4)
 
-        diseases_count = sum(1 for m, _ in monitorings if m.problem_type == "Болезнь")
-        pests_count = sum(1 for m, _ in monitorings if m.problem_type == "Вредитель")
-        weeds_count = sum(1 for m, _ in monitorings if m.problem_type == "Сорняк")
-        treatment_needed = sum(1 for m, _ in monitorings if m.treatment_required)
+        diseases_count = sum(1 for m, _ in monitorings if m.pest_type == "Болезнь")
+        pests_count = sum(1 for m, _ in monitorings if m.pest_type == "Вредитель")
+        weeds_count = sum(1 for m, _ in monitorings if m.pest_type == "Сорняк")
+        treatment_needed = sum(1 for m, _ in monitorings if m.threshold_exceeded)
 
         with col1:
             st.metric("Болезни", diseases_count)
@@ -432,7 +430,7 @@ with tab2:
             # Топ проблем
             problem_counts = {}
             for mon, _ in monitorings:
-                problem_counts[mon.problem_name] = problem_counts.get(mon.problem_name, 0) + 1
+                problem_counts[mon.pest_name] = problem_counts.get(mon.pest_name, 0) + 1
 
             top_problems = sorted(problem_counts.items(), key=lambda x: x[1], reverse=True)[:10]
 
@@ -457,7 +455,7 @@ with tab2:
                     map_data.append({
                         "lat": mon.gps_lat,
                         "lon": mon.gps_lon,
-                        "Проблема": f"{mon.problem_type}: {mon.problem_name}",
+                        "Проблема": f"{mon.pest_type}: {mon.pest_name}",
                         "Поле": field.name
                     })
 
