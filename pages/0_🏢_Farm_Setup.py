@@ -8,7 +8,7 @@ import sys
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from modules.database import get_db, Farm
+from modules.database import get_db, Farm, User
 from modules.validators import DataValidator
 from modules.auth import (
     require_auth,
@@ -359,7 +359,20 @@ if can_edit_data() and (not existing_farm or st.session_state.get('edit_mode', F
                         )
                         db.add(new_farm)
                         db.commit()
-                        st.success("✅ Хозяйство успешно зарегистрировано!")
+                        db.refresh(new_farm)  # Получить ID созданного хозяйства
+
+                        # Автоматически привязать текущего фермера к созданному хозяйству
+                        if not is_admin() and user:
+                            current_user_id = user.get("id")
+                            db_user = db.query(User).filter(User.id == current_user_id).first()
+                            if db_user and not db_user.farm_id:
+                                db_user.farm_id = new_farm.id
+                                db.commit()
+                                st.success("✅ Хозяйство успешно зарегистрировано и привязано к вашему аккаунту!")
+                            else:
+                                st.success("✅ Хозяйство успешно зарегистрировано!")
+                        else:
+                            st.success("✅ Хозяйство успешно зарегистрировано!")
 
                     st.balloons()
                     st.session_state.edit_mode = False
