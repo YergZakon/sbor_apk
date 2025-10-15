@@ -297,12 +297,13 @@ try:
                 try:
                     # Создание операции
                     new_operation = Operation(
+                        farm_id=farm.id,
                         field_id=selected_field.id,
                         operation_type="sowing",
                         operation_date=sowing_date,
                         crop=selected_crop,
                         variety=selected_variety if selected_variety != "Не указан" else None,
-                        area_processed=area_processed,
+                        area_processed_ha=area_processed,
                         operator=operator if operator else None,
                         weather_conditions=weather_conditions if weather_conditions else None,
                         notes=notes if notes else None
