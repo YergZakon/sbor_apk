@@ -5,6 +5,7 @@
 import streamlit as st
 from modules.config import settings
 from modules.database import init_db
+from modules.auth_widget import show_auth_widget
 import os
 
 # Настройка страницы
@@ -295,6 +296,10 @@ st.markdown(
 with st.sidebar:
     st.image("https://via.placeholder.com/200x100/2e7d32/ffffff?text=АгроДанные", use_container_width=True)
 
+    # Виджет авторизации
+    show_auth_widget()
+
+    st.markdown("---")
     st.markdown("### 🎯 Навигация")
     st.info("""
     Используйте меню слева для перехода к различным разделам системы.
@@ -312,4 +317,4 @@ with st.sidebar:
     st.markdown("### 📈 Статистика")
     st.metric("Версия системы", settings.VERSION)
     st.metric("Справочников", "8")
-    st.metric("Модулей", "16")
+    st.metric("Модулей", "18")
