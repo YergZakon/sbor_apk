@@ -7,14 +7,20 @@ import pandas as pd
 from sqlalchemy.orm import Session
 from modules.database import SessionLocal, Farm, Field, Operation, AgrochemicalAnalysis
 from modules.config import settings
+from modules.auth import require_auth, filter_query_by_farm, get_current_user, get_user_display_name
 import plotly.express as px
 import plotly.graph_objects as go
 
 # Настройка страницы
 st.set_page_config(page_title="Dashboard", page_icon="🏠", layout="wide")
 
+# Требуем авторизацию
+require_auth()
+
 # Заголовок
-st.title("🏠 Dashboard - Панель управления")
+user = get_current_user()
+st.title(f"🏠 Dashboard - Панель управления")
+st.caption(f"Добро пожаловать, **{get_user_display_name()}**!")
 
 # Получение сессии БД
 db = SessionLocal()
@@ -26,13 +32,13 @@ try:
 
     st.markdown("### 📊 Основные показатели")
 
-    # Получение данных
-    farms_count = db.query(Farm).count()
-    fields_count = db.query(Field).count()
-    operations_count = db.query(Operation).count()
+    # Получение данных с учетом прав доступа
+    farms_count = filter_query_by_farm(db.query(Farm), Farm).count()
+    fields_count = filter_query_by_farm(db.query(Field), Field).count()
+    operations_count = filter_query_by_farm(db.query(Operation), Operation).count()
 
     # Расчет общей площади
-    total_area = db.query(Field).with_entities(Field.area_ha).all()
+    total_area = filter_query_by_farm(db.query(Field), Field).with_entities(Field.area_ha).all()
     total_area_sum = sum([f[0] for f in total_area if f[0]]) if total_area else 0
 
     # Метрики в 4 колонки
@@ -87,7 +93,7 @@ try:
     }
 
     # Агрохимические анализы
-    analyses_count = db.query(AgrochemicalAnalysis).count()
+    analyses_count = filter_query_by_farm(db.query(AgrochemicalAnalysis), AgrochemicalAnalysis).count()
     if fields_count > 0:
         data_completeness["Агрохимические анализы"] = min(100, (analyses_count / fields_count) * 100)
 
@@ -163,7 +169,7 @@ try:
 
         with col2:
             # Распределение площадей полей
-            fields_data = db.query(Field.name, Field.area_ha).filter(Field.area_ha.isnot(None)).all()
+            fields_data = filter_query_by_farm(db.query(Field.name, Field.area_ha).filter(Field.area_ha.isnot(None)), Field).all()
             if fields_data:
                 df_fields = pd.DataFrame(fields_data, columns=['Поле', 'Площадь (га)'])
 
@@ -215,8 +221,11 @@ try:
         })
 
     # Проверка полей без координат
-    fields_no_coords = db.query(Field).filter(
-        (Field.center_lat.is_(None)) | (Field.center_lon.is_(None))
+    fields_no_coords = filter_query_by_farm(
+        db.query(Field).filter(
+            (Field.center_lat.is_(None)) | (Field.center_lon.is_(None))
+        ),
+        Field
     ).count()
 
     if fields_no_coords > 0:
@@ -279,14 +288,17 @@ try:
     if operations_count > 0:
         st.markdown("### 📜 Последние операции")
 
-        # Получение последних 10 операций
-        recent_operations = db.query(
-            Operation.operation_date,
-            Operation.operation_type,
-            Field.name.label('field_name'),
-            Operation.crop,
-            Operation.area_processed_ha
-        ).join(Field).order_by(Operation.operation_date.desc()).limit(10).all()
+        # Получение последних 10 операций с фильтрацией по хозяйству
+        recent_operations = filter_query_by_farm(
+            db.query(
+                Operation.operation_date,
+                Operation.operation_type,
+                Field.name.label('field_name'),
+                Operation.crop,
+                Operation.area_processed_ha
+            ).join(Field),
+            Field
+        ).order_by(Operation.operation_date.desc()).limit(10).all()
 
         if recent_operations:
             df_operations = pd.DataFrame(recent_operations, columns=[
@@ -316,7 +328,7 @@ try:
         st.markdown("---")
         st.markdown("### 🏢 Информация о хозяйстве")
 
-        farm = db.query(Farm).first()
+        farm = filter_query_by_farm(db.query(Farm), Farm).first()
         if farm:
             col1, col2, col3 = st.columns(3)
 

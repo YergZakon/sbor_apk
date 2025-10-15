@@ -199,3 +199,85 @@ def get_user_role_display() -> str:
     }
 
     return role_map.get(user.get("role"), user.get("role"))
+
+
+def get_user_farm_id() -> Optional[int]:
+    """Получение ID хозяйства текущего пользователя"""
+    user = get_current_user()
+    if not user:
+        return None
+    return user.get("farm_id")
+
+
+def filter_query_by_farm(query, model):
+    """
+    Фильтрация запроса по хозяйству в зависимости от роли пользователя
+
+    Args:
+        query: SQLAlchemy query
+        model: Модель с полем farm_id
+
+    Returns:
+        Отфильтрованный query
+    """
+    user = get_current_user()
+
+    if not user:
+        # Если не авторизован - пустой результат
+        return query.filter(False)
+
+    # Админ видит всё
+    if user.get("role") == "admin":
+        return query
+
+    # Фермер и Viewer видят только данные своего хозяйства
+    farm_id = user.get("farm_id")
+    if not farm_id:
+        # Если не привязан к хозяйству - пустой результат
+        return query.filter(False)
+
+    # Фильтруем по farm_id
+    if hasattr(model, 'farm_id'):
+        return query.filter(model.farm_id == farm_id)
+    else:
+        # Если у модели нет farm_id напрямую, возвращаем как есть
+        return query
+
+
+def can_edit_data() -> bool:
+    """Проверка, может ли пользователь редактировать данные"""
+    user = get_current_user()
+    if not user:
+        return False
+
+    # Admin и Farmer могут редактировать
+    return user.get("role") in ["admin", "farmer"]
+
+
+def can_delete_data() -> bool:
+    """Проверка, может ли пользователь удалять данные"""
+    user = get_current_user()
+    if not user:
+        return False
+
+    # Только Admin может удалять
+    return user.get("role") == "admin"
+
+
+def require_farm_binding():
+    """Проверка, что пользователь привязан к хозяйству"""
+    require_auth()
+
+    user = get_current_user()
+
+    # Админ может работать без привязки
+    if user.get("role") == "admin":
+        return
+
+    # Для остальных обязательна привязка
+    if not user.get("farm_id"):
+        st.error("❌ Ваш аккаунт не привязан к хозяйству")
+        st.warning("Обратитесь к администратору для привязки вашего аккаунта к хозяйству.")
+
+        st.info("**Контакты администратора:**\nEmail: admin@agrodata.kz")
+        st.stop()

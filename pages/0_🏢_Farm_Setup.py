@@ -10,18 +10,50 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from modules.database import get_db, Farm
 from modules.validators import DataValidator
+from modules.auth import (
+    require_auth,
+    filter_query_by_farm,
+    get_current_user,
+    get_user_display_name,
+    can_edit_data,
+    can_delete_data,
+    is_admin
+)
 
 # Настройка страницы
 st.set_page_config(page_title="Регистрация хозяйства", page_icon="🏢", layout="wide")
 
+# Требуем авторизацию
+require_auth()
+
 st.title("🏢 Регистрация хозяйства")
+st.caption(f"Пользователь: **{get_user_display_name()}**")
 
 # Инициализация
 validator = DataValidator()
 db = next(get_db())
 
-# Проверка наличия хозяйства
-existing_farm = db.query(Farm).first()
+# Получение хозяйства с учетом прав доступа
+user = get_current_user()
+if is_admin():
+    # Админ может выбирать хозяйства
+    all_farms = db.query(Farm).all()
+    if all_farms:
+        farm_names = {f.name: f.id for f in all_farms}
+        selected_farm_name = st.selectbox(
+            "Выберите хозяйство для просмотра/редактирования",
+            options=["Создать новое"] + list(farm_names.keys())
+        )
+
+        if selected_farm_name == "Создать новое":
+            existing_farm = None
+        else:
+            existing_farm = db.query(Farm).filter(Farm.id == farm_names[selected_farm_name]).first()
+    else:
+        existing_farm = None
+else:
+    # Фермер видит только свое хозяйство
+    existing_farm = filter_query_by_farm(db.query(Farm), Farm).first()
 
 if existing_farm:
     st.success(f"✅ Хозяйство уже зарегистрировано: **{existing_farm.name}**")
@@ -60,34 +92,41 @@ if existing_farm:
 
     st.markdown("---")
 
-    # Кнопка редактирования
-    if st.button("✏️ Редактировать данные хозяйства"):
-        st.session_state.edit_mode = True
+    # Кнопка редактирования (доступна для админов и фермеров)
+    if can_edit_data():
+        if st.button("✏️ Редактировать данные хозяйства"):
+            st.session_state.edit_mode = True
+    else:
+        st.info("ℹ️ У вас нет прав на редактирование данных хозяйства")
 
-    # Кнопка удаления (с подтверждением)
-    with st.expander("⚠️ Удалить хозяйство (опасно!)"):
-        st.warning("Это действие удалит ВСЕ данные хозяйства, включая поля и операции!")
-        confirm_delete = st.text_input("Введите БИН хозяйства для подтверждения удаления:")
+    # Кнопка удаления (только для админов)
+    if can_delete_data():
+        with st.expander("⚠️ Удалить хозяйство (опасно!)"):
+            st.warning("Это действие удалит ВСЕ данные хозяйства, включая поля и операции!")
+            confirm_delete = st.text_input("Введите БИН хозяйства для подтверждения удаления:")
 
-        if st.button("🗑️ Удалить хозяйство", type="secondary"):
-            if confirm_delete == existing_farm.bin:
-                try:
-                    db.delete(existing_farm)
-                    db.commit()
-                    st.success("✅ Хозяйство удалено!")
-                    st.rerun()
-                except Exception as e:
-                    db.rollback()
-                    st.error(f"❌ Ошибка при удалении: {str(e)}")
-            else:
-                st.error("❌ БИН не совпадает!")
+            if st.button("🗑️ Удалить хозяйство", type="secondary"):
+                if confirm_delete == existing_farm.bin:
+                    try:
+                        db.delete(existing_farm)
+                        db.commit()
+                        st.success("✅ Хозяйство удалено!")
+                        st.rerun()
+                    except Exception as e:
+                        db.rollback()
+                        st.error(f"❌ Ошибка при удалении: {str(e)}")
+                else:
+                    st.error("❌ БИН не совпадает!")
 
 else:
-    st.info("ℹ️ Хозяйство еще не зарегистрировано. Заполните форму ниже или импортируйте данные из Excel.")
-    st.session_state.edit_mode = True
+    if can_edit_data():
+        st.info("ℹ️ Хозяйство еще не зарегистрировано. Заполните форму ниже или импортируйте данные из Excel.")
+        st.session_state.edit_mode = True
+    else:
+        st.warning("⚠️ У вас нет прав на создание хозяйства. Обратитесь к администратору.")
 
-# Форма регистрации/редактирования
-if not existing_farm or st.session_state.get('edit_mode', False):
+# Форма регистрации/редактирования (только для админов и фермеров)
+if can_edit_data() and (not existing_farm or st.session_state.get('edit_mode', False)):
 
     st.markdown("---")
     st.markdown("### 📝 Форма регистрации")
