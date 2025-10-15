@@ -40,9 +40,11 @@ if is_admin():
     all_farms = db.query(Farm).all()
     if all_farms:
         farm_names = {f.name: f.id for f in all_farms}
+        # По умолчанию выбираем первое хозяйство, а не "Создать новое"
         selected_farm_name = st.selectbox(
             "Выберите хозяйство для просмотра/редактирования",
-            options=["Создать новое"] + list(farm_names.keys())
+            options=list(farm_names.keys()) + ["Создать новое"],
+            index=0  # Первое хозяйство по умолчанию
         )
 
         if selected_farm_name == "Создать новое":
