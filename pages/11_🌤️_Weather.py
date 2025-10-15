@@ -13,13 +13,26 @@ import sys
 sys.path.append(str(Path(__file__).parent.parent))
 
 from modules.database import get_db, Farm, Field, WeatherData
+from modules.auth import (
+    require_auth,
+    require_farm_binding,
+    filter_query_by_farm,
+    get_user_display_name,
+    can_edit_data,
+    can_delete_data
+)
 from modules.validators import DataValidator
 from utils.formatters import format_date, format_number
 
 # Настройка страницы
 st.set_page_config(page_title="Метеоданные", page_icon="🌤️", layout="wide")
 
+# Требуем авторизацию и привязку к хозяйству
+require_auth()
+require_farm_binding()
+
 st.title("🌤️ Метеорологические данные")
+st.caption(f"Пользователь: **{get_user_display_name()}**")
 
 # Инициализация валидатора
 validator = DataValidator()
@@ -28,13 +41,13 @@ validator = DataValidator()
 db = next(get_db())
 
 # Проверка наличия хозяйства
-farm = db.query(Farm).first()
+farm = filter_query_by_farm(db.query(Farm), Farm).first()
 if not farm:
     st.warning("⚠️ Сначала создайте хозяйство на странице Farm Setup!")
     st.stop()
 
 # Получение списка полей
-fields = db.query(Field).filter(Field.farm_id == farm.id).all()
+fields = filter_query_by_farm(db.query(Field), Field).all()
 
 # Табы
 tab1, tab2, tab3, tab4 = st.tabs(["📝 Регистрация данных", "📊 История погоды", "📈 Анализ", "🌡️ Агроклиматические показатели"])

@@ -6,6 +6,14 @@ import streamlit as st
 import pandas as pd
 from sqlalchemy.orm import Session
 from modules.database import SessionLocal, Farm, Field
+from modules.auth import (
+    require_auth,
+    require_farm_binding,
+    filter_query_by_farm,
+    get_user_display_name,
+    can_edit_data,
+    can_delete_data
+)
 from modules.validators import validator
 from modules.config import settings
 import json
@@ -13,18 +21,23 @@ import json
 # Настройка страницы
 st.set_page_config(page_title="Поля", page_icon="🌱", layout="wide")
 
+# Требуем авторизацию и привязку к хозяйству
+require_auth()
+require_farm_binding()
+
 # Заголовок
 st.title("🌱 Управление полями")
+st.caption(f"Пользователь: **{get_user_display_name()}**")
 
 # Получение сессии БД
 db = SessionLocal()
 
 try:
     # Проверка наличия хозяйства
-    farm = db.query(Farm).first()
+    farm = filter_query_by_farm(db.query(Farm), Farm).first()
 
     if not farm:
-        st.error("❌ Сначала необходимо зарегистрировать хозяйство на главной странице!")
+        st.error("❌ Хозяйство не найдено. Обратитесь к администратору для привязки к хозяйству.")
         st.stop()
 
     # ============================================================================
@@ -33,7 +46,7 @@ try:
 
     st.markdown("### 📋 Список полей")
 
-    fields = db.query(Field).filter(Field.farm_id == farm.id).all()
+    fields = filter_query_by_farm(db.query(Field), Field).all()
 
     if fields:
         # Создание DataFrame для отображения

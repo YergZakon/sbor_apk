@@ -14,13 +14,26 @@ import sys
 sys.path.append(str(Path(__file__).parent.parent))
 
 from modules.database import get_db, Farm, Field, Operation, PesticideApplication
+from modules.auth import (
+    require_auth,
+    require_farm_binding,
+    filter_query_by_farm,
+    get_user_display_name,
+    can_edit_data,
+    can_delete_data
+)
 from modules.validators import DataValidator
 from utils.formatters import format_date, format_area, format_number
 
 # Настройка страницы
 st.set_page_config(page_title="СЗР", page_icon="🛡️", layout="wide")
 
+# Требуем авторизацию и привязку к хозяйству
+require_auth()
+require_farm_binding()
+
 st.title("🛡️ Учет применения средств защиты растений")
+st.caption(f"Пользователь: **{get_user_display_name()}**")
 
 # Инициализация валидатора
 validator = DataValidator()
@@ -42,13 +55,13 @@ pesticides_ref = load_pesticides_reference()
 db = next(get_db())
 
 # Проверка наличия хозяйства
-farm = db.query(Farm).first()
+farm = filter_query_by_farm(db.query(Farm), Farm).first()
 if not farm:
     st.warning("⚠️ Сначала создайте хозяйство на странице импорта!")
     st.stop()
 
 # Получение списка полей
-fields = db.query(Field).filter(Field.farm_id == farm.id).all()
+fields = filter_query_by_farm(db.query(Field), Field).all()
 if not fields:
     st.warning("⚠️ Сначала добавьте поля на странице 'Поля'!")
     st.stop()

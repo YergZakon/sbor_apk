@@ -8,14 +8,27 @@ import io
 from datetime import datetime
 from sqlalchemy.orm import Session
 from modules.database import SessionLocal, Farm, Field, Operation, AgrochemicalAnalysis, EconomicData, HarvestData, SowingDetail, FertilizerApplication
+from modules.auth import (
+    require_auth,
+    require_farm_binding,
+    filter_query_by_farm,
+    get_user_display_name,
+    can_edit_data,
+    can_delete_data
+)
 from modules.validators import validator
 from modules.config import settings
 
 # Настройка страницы
 st.set_page_config(page_title="Импорт данных", page_icon="📥", layout="wide")
 
+# Требуем авторизацию и привязку к хозяйству
+require_auth()
+require_farm_binding()
+
 # Заголовок
 st.title("📥 Импорт данных из Excel")
+st.caption(f"Пользователь: **{get_user_display_name()}**")
 
 st.markdown("""
 Загрузите Excel-файлы для быстрого импорта данных в систему.
@@ -27,7 +40,7 @@ db = SessionLocal()
 
 try:
     # Проверка наличия хозяйства
-    farm = db.query(Farm).first()
+    farm = filter_query_by_farm(db.query(Farm), Farm).first()
 
     if not farm:
         st.warning("⚠️ Рекомендуется сначала зарегистрировать хозяйство на главной странице")

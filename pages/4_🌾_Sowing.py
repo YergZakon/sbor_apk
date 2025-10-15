@@ -8,14 +8,27 @@ import json
 from datetime import datetime, date
 from sqlalchemy.orm import Session
 from modules.database import SessionLocal, Farm, Field, Operation, SowingDetail
+from modules.auth import (
+    require_auth,
+    require_farm_binding,
+    filter_query_by_farm,
+    get_user_display_name,
+    can_edit_data,
+    can_delete_data
+)
 from modules.validators import validator
 from modules.config import settings
 
 # Настройка страницы
 st.set_page_config(page_title="Посев", page_icon="🌾", layout="wide")
 
+# Требуем авторизацию и привязку к хозяйству
+require_auth()
+require_farm_binding()
+
 # Заголовок
 st.title("🌾 Учет посевных работ")
+st.caption(f"Пользователь: **{get_user_display_name()}**")
 
 # Получение сессии БД
 db = SessionLocal()
@@ -26,14 +39,14 @@ with open('data/crops.json', 'r', encoding='utf-8') as f:
 
 try:
     # Проверка наличия хозяйства
-    farm = db.query(Farm).first()
+    farm = filter_query_by_farm(db.query(Farm), Farm).first()
 
     if not farm:
         st.error("❌ Сначала необходимо зарегистрировать хозяйство!")
         st.stop()
 
     # Получение полей
-    fields = db.query(Field).filter(Field.farm_id == farm.id).all()
+    fields = filter_query_by_farm(db.query(Field), Field).all()
 
     if not fields:
         st.warning("⚠️ Сначала добавьте поля в разделе 'Fields'")
