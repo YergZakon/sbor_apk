@@ -17,6 +17,44 @@ Base = declarative_base()
 
 
 # ============================================================================
+# AUTHENTICATION & AUTHORIZATION
+# ============================================================================
+
+class User(Base):
+    """Пользователь системы"""
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(50), unique=True, nullable=False, index=True)
+    email = Column(String(100), unique=True, nullable=False, index=True)
+    hashed_password = Column(String(255), nullable=False)
+    full_name = Column(String(200))
+    role = Column(String(20), nullable=False, default="farmer")  # admin, farmer, viewer
+    is_active = Column(Boolean, default=True)
+    farm_id = Column(Integer, ForeignKey("farms.id"), nullable=True)  # Привязка к хозяйству
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    last_login = Column(DateTime)
+
+    # Relationships
+    farm = relationship("Farm", back_populates="users", foreign_keys=[farm_id])
+
+
+class AuditLog(Base):
+    """Журнал действий пользователей"""
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    action = Column(String(100), nullable=False)  # login, logout, create, update, delete
+    entity_type = Column(String(50))  # farm, field, operation, etc.
+    entity_id = Column(Integer)
+    details = Column(Text)  # JSON с деталями
+    ip_address = Column(String(50))
+    created_at = Column(DateTime, server_default=func.now())
+
+
+# ============================================================================
 # ОСНОВНЫЕ ТАБЛИЦЫ
 # ============================================================================
 
@@ -48,6 +86,7 @@ class Farm(Base):
 
     # Relationships
     fields = relationship("Field", back_populates="farm")
+    users = relationship("User", back_populates="farm", foreign_keys="[User.farm_id]")
 
 
 class Field(Base):
