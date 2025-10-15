@@ -320,7 +320,7 @@ try:
                         row_spacing_cm=row_spacing if row_spacing else None,
                         seed_treatment=seed_treatment if seed_treatment else None,
                         soil_temp_c=soil_temp if soil_temp else None,
-                        soil_moisture_pct=soil_moisture if soil_moisture else None
+                        soil_moisture_percent=soil_moisture if soil_moisture else None
                     )
 
                     db.add(sowing_detail)

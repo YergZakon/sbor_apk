@@ -197,7 +197,7 @@ try:
 
                                         # Обновление полей
                                         farm_to_update.name = data_dict.get("Полное наименование", "")
-                                        farm_to_update.contact_person = data_dict.get("Контактное лицо (ФИО)")
+                                        farm_to_update.director_name = data_dict.get("Контактное лицо (ФИО)")
                                         farm_to_update.phone = str(phone_value) if phone_value else None
 
                                         db.commit()
