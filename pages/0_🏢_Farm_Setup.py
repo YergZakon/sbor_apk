@@ -287,6 +287,12 @@ if can_edit_data() and (not existing_farm or st.session_state.get('edit_mode', F
             if not is_valid:
                 errors.append(f"БИН: {msg}")
 
+            # Проверка на уникальность БИН (только для новых хозяйств или при изменении БИН)
+            if not existing_farm or (existing_farm and existing_farm.bin != bin_number):
+                bin_exists = db.query(Farm).filter(Farm.bin == bin_number).first()
+                if bin_exists:
+                    errors.append(f"Хозяйство с БИН {bin_number} уже зарегистрировано в системе")
+
             # Проверка названия
             if not farm_name or len(farm_name) < 3:
                 errors.append("Название хозяйства должно содержать минимум 3 символа")
