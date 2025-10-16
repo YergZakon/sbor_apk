@@ -19,7 +19,7 @@ class Settings:
     DEBUG = os.getenv("DEBUG", "True") == "True"
 
     # Limits and validation
-    MAX_FIELD_AREA = 10000  # га
+    MAX_FIELD_AREA = 30000  # га
     MAX_YIELD = 10.0  # т/га для зерновых
     MIN_YEAR = 2020
     MAX_YEAR = 2030

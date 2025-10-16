@@ -221,7 +221,7 @@ if can_edit_data() and (not existing_farm or st.session_state.get('edit_mode', F
             total_area = st.number_input(
                 "Общая площадь земель (га) *",
                 min_value=0.0,
-                max_value=100000.0,
+                max_value=500000.0,
                 value=float(existing_farm.total_area_ha) if existing_farm and existing_farm.total_area_ha else 0.0,
                 step=10.0,
                 help="Общая площадь земельных ресурсов"
