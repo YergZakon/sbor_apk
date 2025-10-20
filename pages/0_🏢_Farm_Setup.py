@@ -55,7 +55,11 @@ if is_admin():
         existing_farm = None
 else:
     # Фермер видит только свое хозяйство
-    existing_farm = filter_query_by_farm(db.query(Farm), Farm).first()
+    user_farm_id = user.get("farm_id") if user else None
+    if user_farm_id:
+        existing_farm = db.query(Farm).filter(Farm.id == user_farm_id).first()
+    else:
+        existing_farm = None
 
 if existing_farm:
     st.success(f"✅ Хозяйство уже зарегистрировано: **{existing_farm.name}**")
