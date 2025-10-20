@@ -374,6 +374,8 @@ if can_edit_data() and (not existing_farm or st.session_state.get('edit_mode', F
                             if db_user and not db_user.farm_id:
                                 db_user.farm_id = new_farm.id
                                 db.commit()
+                                # Обновляем farm_id в session_state
+                                st.session_state["user"]["farm_id"] = new_farm.id
                                 st.success("✅ Хозяйство успешно зарегистрировано и привязано к вашему аккаунту!")
                             else:
                                 st.success("✅ Хозяйство успешно зарегистрировано!")

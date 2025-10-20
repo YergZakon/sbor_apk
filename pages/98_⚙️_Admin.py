@@ -183,6 +183,13 @@ try:
 
                                 db.commit()
 
+                                # Если редактируем текущего пользователя, обновляем session_state
+                                if selected_user.id == current_user['id']:
+                                    st.session_state["user"]["full_name"] = selected_user.full_name
+                                    st.session_state["user"]["email"] = selected_user.email
+                                    st.session_state["user"]["role"] = selected_user.role
+                                    st.session_state["user"]["farm_id"] = selected_user.farm_id
+
                                 # Логируем действие
                                 log_action(
                                     db, current_user['id'], "update", "user", selected_user.id,
