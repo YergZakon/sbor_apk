@@ -39,20 +39,21 @@ ORDER BY table_name;
 -- Проверка на недостающие таблицы
 SELECT 'НЕДОСТАЮЩИЕ ТАБЛИЦЫ' AS check_type;
 SELECT
-    unnest(ARRAY[
-        'users', 'farms', 'fields', 'operations',
-        'sowing_details', 'fertilizer_applications',
-        'pesticide_applications', 'harvest_data',
-        'agrochemical_analyses', 'economic_data',
-        'weather_data', 'machinery', 'machinery_equipment',
-        'gps_tracks', 'phytosanitary_monitoring',
-        'satellite_data', 'ref_crops', 'ref_fertilizers',
-        'ref_pesticides', 'audit_logs'
-    ]) AS required_table
+    t.required_table
+FROM unnest(ARRAY[
+    'users', 'farms', 'fields', 'operations',
+    'sowing_details', 'fertilizer_applications',
+    'pesticide_applications', 'harvest_data',
+    'agrochemical_analyses', 'economic_data',
+    'weather_data', 'machinery', 'machinery_equipment',
+    'gps_tracks', 'phytosanitary_monitoring',
+    'satellite_data', 'ref_crops', 'ref_fertilizers',
+    'ref_pesticides', 'audit_logs'
+]) AS t(required_table)
 WHERE NOT EXISTS (
     SELECT 1 FROM information_schema.tables
     WHERE table_schema = 'public'
-        AND table_name = required_table
+        AND table_name = t.required_table
 );
 
 -- ============================================================================
