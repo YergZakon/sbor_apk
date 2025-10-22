@@ -362,7 +362,8 @@ with tab2:
     ).join(
         Field, Operation.field_id == Field.id
     ).filter(
-        Operation.operation_type == "soil_analysis"
+        Operation.operation_type == "soil_analysis",
+        Field.farm_id == farm.id  # КРИТИЧЕСКИЙ ФИЛЬТР: только операции текущего хозяйства
     )
 
     # Применение фильтров

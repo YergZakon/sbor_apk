@@ -393,6 +393,8 @@ with tab2:
         Field, Operation.field_id == Field.id
     ).filter(
         Operation.operation_type == "spraying"
+    ).filter(
+        Field.farm_id == farm.id  # КРИТИЧЕСКИЙ ФИЛЬТР: только операции текущего хозяйства
     )
 
     # Применение фильтров
@@ -578,7 +580,8 @@ with tab4:
         Field, Operation.field_id == Field.id
     ).filter(
         Operation.operation_type == "spraying",
-        PesticideApplication.waiting_period_days.isnot(None)
+        PesticideApplication.waiting_period_days.isnot(None),
+        Field.farm_id == farm.id  # КРИТИЧЕСКИЙ ФИЛЬТР: только операции текущего хозяйства
     )
 
     applications_with_waiting = query.order_by(Operation.operation_date.desc()).all()

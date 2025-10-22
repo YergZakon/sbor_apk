@@ -325,6 +325,8 @@ with tab2:
         Field, Operation.field_id == Field.id
     ).filter(
         Operation.operation_type == "fertilizing"
+    ).filter(
+        Field.farm_id == farm.id  # КРИТИЧЕСКИЙ ФИЛЬТР: только операции текущего хозяйства
     )
 
     # Применение фильтров

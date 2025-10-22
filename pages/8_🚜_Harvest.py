@@ -395,7 +395,8 @@ with tab2:
     ).join(
         Field, Operation.field_id == Field.id
     ).filter(
-        Operation.operation_type == "harvest"
+        Operation.operation_type == "harvest",
+        Field.farm_id == farm.id  # КРИТИЧЕСКИЙ ФИЛЬТР: только операции текущего хозяйства
     )
 
     # Применение фильтров
@@ -520,7 +521,8 @@ with tab3:
     ).join(
         Field, Operation.field_id == Field.id
     ).filter(
-        Operation.operation_type == "harvest"
+        Operation.operation_type == "harvest",
+        Field.farm_id == farm.id  # КРИТИЧЕСКИЙ ФИЛЬТР: только операции текущего хозяйства
     ).all()
 
     if all_harvests:

@@ -123,6 +123,9 @@ try:
         Operation.notes
     ).join(Field)
 
+    # КРИТИЧЕСКИЙ ФИЛЬТР: только операции из полей текущего хозяйства
+    query = query.filter(Field.farm_id == farm.id)
+
     # Применение фильтров
     if operation_types[selected_type]:
         query = query.filter(Operation.operation_type == operation_types[selected_type])
