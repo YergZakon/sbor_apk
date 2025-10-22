@@ -292,7 +292,7 @@ with tab2:
     # Применение фильтров
     if filter_year != "Все годы":
         from sqlalchemy import extract
-        query = query.filter(extract('year', WeatherData.observation_date) == filter_year)
+        query = query.filter(extract('year', WeatherData.datetime) == filter_year)
 
     if filter_month != "Все месяцы":
         months = {
@@ -301,9 +301,9 @@ with tab2:
             "Сентябрь": 9, "Октябрь": 10, "Ноябрь": 11, "Декабрь": 12
         }
         from sqlalchemy import extract
-        query = query.filter(extract('month', WeatherData.observation_date) == months[filter_month])
+        query = query.filter(extract('month', WeatherData.datetime) == months[filter_month])
 
-    weather_records = query.order_by(WeatherData.observation_date.desc()).all()
+    weather_records = query.order_by(WeatherData.datetime.desc()).all()
 
     if weather_records:
         st.metric("Всего записей", len(weather_records))
@@ -311,15 +311,16 @@ with tab2:
         # Таблица
         data = []
         for w in weather_records:
+            temp_avg = (w.temp_max_c + w.temp_min_c) / 2 if w.temp_max_c and w.temp_min_c else w.temp_air_c
             data.append({
-                "Дата": format_date(w.observation_date),
+                "Дата": format_date(w.datetime.date()) if w.datetime else "-",
                 "T макс (°C)": format_number(w.temp_max_c, 1),
                 "T мин (°C)": format_number(w.temp_min_c, 1),
-                "T средн (°C)": format_number(w.temp_avg_c, 1),
+                "T средн (°C)": format_number(temp_avg, 1) if temp_avg else "-",
                 "Осадки (мм)": format_number(w.precipitation_mm, 1),
-                "Влажность (%)": w.humidity_percent or "-",
+                "Влажность (%)": format_number(w.humidity_pct, 0) if w.humidity_pct else "-",
                 "Ветер (м/с)": format_number(w.wind_speed_ms, 1) if w.wind_speed_ms else "-",
-                "Явления": w.weather_phenomena or "-"
+                "Примечания": w.notes or "-"
             })
 
         df = pd.DataFrame(data)
@@ -366,7 +367,7 @@ with tab3:
     # Получение всех данных для анализа
     all_weather = db.query(WeatherData).filter(
         WeatherData.farm_id == farm.id
-    ).order_by(WeatherData.observation_date).all()
+    ).order_by(WeatherData.datetime).all()
 
     if len(all_weather) < 7:
         st.warning("⚠️ Недостаточно данных для анализа. Необходимо минимум 7 дней.")
@@ -374,10 +375,10 @@ with tab3:
         # График температуры
         st.markdown("### 🌡️ Динамика температуры")
 
-        dates = [w.observation_date for w in all_weather]
+        dates = [w.datetime.date() if w.datetime else None for w in all_weather]
         temp_max = [w.temp_max_c for w in all_weather]
         temp_min = [w.temp_min_c for w in all_weather]
-        temp_avg = [w.temp_avg_c for w in all_weather]
+        temp_avg = [(w.temp_max_c + w.temp_min_c) / 2 if w.temp_max_c and w.temp_min_c else w.temp_air_c for w in all_weather]
 
         fig_temp = go.Figure()
         fig_temp.add_trace(go.Scatter(x=dates, y=temp_max, mode='lines', name='T макс', line=dict(color='red')))

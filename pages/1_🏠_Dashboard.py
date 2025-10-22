@@ -26,6 +26,13 @@ st.caption(f"Добро пожаловать, **{get_user_display_name()}**!")
 db = SessionLocal()
 
 try:
+    # Получение хозяйства пользователя
+    if is_admin():
+        farm = db.query(Farm).first()
+    else:
+        user_farm_id = user.get("farm_id") if user else None
+        farm = db.query(Farm).filter(Farm.id == user_farm_id).first() if user_farm_id else None
+
     # ============================================================================
     # ОСНОВНЫЕ МЕТРИКИ
     # ============================================================================
@@ -326,13 +333,6 @@ try:
     if farms_count > 0:
         st.markdown("---")
         st.markdown("### 🏢 Информация о хозяйстве")
-
-        # Получение хозяйства пользователя
-        if is_admin():
-            farm = db.query(Farm).first()
-        else:
-            user_farm_id = user.get("farm_id") if user else None
-            farm = db.query(Farm).filter(Farm.id == user_farm_id).first() if user_farm_id else None
 
         if farm:
             col1, col2, col3 = st.columns(3)
