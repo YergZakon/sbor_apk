@@ -1,5 +1,6 @@
 """
 Database models and connection management
+Updated: 2025-10-22 - Added Machinery, Implements and new operation details models
 """
 from datetime import datetime
 from sqlalchemy import create_engine, Column, Integer, String, Float, Date, DateTime, Boolean, Text, ForeignKey, func
