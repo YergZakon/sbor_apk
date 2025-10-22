@@ -495,7 +495,7 @@ class DesiccationDetails(Base):
     humidity_percent = Column(Float)
 
     # Relationships
-    operation = relationship("Operation", backref="desiccation_details")
+    operation = relationship("Operation", back_populates="desiccation_details")
 
 
 class TillageDetails(Base):
@@ -509,7 +509,7 @@ class TillageDetails(Base):
     tillage_purpose = Column(String(50))  # pre_sowing, post_harvest, weed_control, moisture_retention, fallow
 
     # Relationships
-    operation = relationship("Operation", backref="tillage_details")
+    operation = relationship("Operation", back_populates="tillage_details")
 
 
 class IrrigationDetails(Base):
@@ -527,7 +527,7 @@ class IrrigationDetails(Base):
     water_quality = Column(String(50))
 
     # Relationships
-    operation = relationship("Operation", backref="irrigation_details")
+    operation = relationship("Operation", back_populates="irrigation_details")
 
 
 class SnowRetentionDetails(Base):
@@ -542,7 +542,7 @@ class SnowRetentionDetails(Base):
     coverage_percent = Column(Float)
 
     # Relationships
-    operation = relationship("Operation", backref="snow_retention_details")
+    operation = relationship("Operation", back_populates="snow_retention_details")
 
 
 class FallowDetails(Base):
@@ -557,7 +557,7 @@ class FallowDetails(Base):
     purpose = Column(Text)
 
     # Relationships
-    operation = relationship("Operation", backref="fallow_details")
+    operation = relationship("Operation", back_populates="fallow_details")
 
 
 # ============================================================================
