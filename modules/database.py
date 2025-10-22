@@ -125,12 +125,17 @@ class Operation(Base):
     id = Column(Integer, primary_key=True, index=True)
     farm_id = Column(Integer, ForeignKey("farms.id"), nullable=False)  # Добавлено farm_id
     field_id = Column(Integer, ForeignKey("fields.id"), nullable=False)
-    operation_type = Column(String(50), nullable=False)  # sowing, fertilizing, spraying, harvest, soil_analysis
+    operation_type = Column(String(50), nullable=False)  # sowing, fertilizing, spraying, harvest, soil_analysis, desiccation, tillage, irrigation, snow_retention, fallow
     operation_date = Column(Date, nullable=False)
+    end_date = Column(Date)  # Дата окончания операции (для многодневных работ)
     crop = Column(String(100))
     variety = Column(String(100))
     area_processed_ha = Column(Float)  # Переименовано для консистентности
-    machine_id = Column(Integer)
+    machine_id = Column(Integer, ForeignKey("machinery.id"))  # Техника (трактор, комбайн, опрыскиватель)
+    implement_id = Column(Integer, ForeignKey("implements.id"))  # Агрегат (сеялка, культиватор, борона)
+    machine_year = Column(Integer)  # Год выпуска техники
+    implement_year = Column(Integer)  # Год выпуска агрегата
+    work_speed_kmh = Column(Float)  # Рабочая скорость км/ч
     operator = Column(String(100))
     weather_conditions = Column(Text)
     notes = Column(Text)
@@ -138,11 +143,18 @@ class Operation(Base):
 
     # Relationships
     field = relationship("Field", back_populates="operations")
+    machinery = relationship("Machinery", foreign_keys=[machine_id])
+    implement = relationship("Implements", foreign_keys=[implement_id])
     sowing_details = relationship("SowingDetail", back_populates="operation", uselist=False)
     fertilizer_applications = relationship("FertilizerApplication", back_populates="operation")
     pesticide_applications = relationship("PesticideApplication", back_populates="operation")
     harvest_data = relationship("HarvestData", back_populates="operation", uselist=False)
     agrochemical_analysis = relationship("AgrochemicalAnalysis", back_populates="operation", uselist=False)
+    desiccation_details = relationship("DesiccationDetails", back_populates="operation", uselist=False)
+    tillage_details = relationship("TillageDetails", back_populates="operation", uselist=False)
+    irrigation_details = relationship("IrrigationDetails", back_populates="operation", uselist=False)
+    snow_retention_details = relationship("SnowRetentionDetails", back_populates="operation", uselist=False)
+    fallow_details = relationship("FallowDetails", back_populates="operation", uselist=False)
 
 
 class SowingDetail(Base):
@@ -160,6 +172,11 @@ class SowingDetail(Base):
     soil_temp_c = Column(Float)  # Температура почвы
     soil_moisture_percent = Column(Float)  # Влажность почвы
     total_seeds_kg = Column(Float)  # Всего семян
+    seed_reproduction = Column(String(50))  # Репродукция семян (элита, 1-я, 2-я и т.д.)
+    seed_origin_country = Column(String(100))  # Страна происхождения семян
+    combined_with_fertilizer = Column(Boolean, default=False)  # Совмещенный посев с удобрениями
+    combined_fertilizer_name = Column(String(200))  # Название удобрения при совмещенном посеве
+    combined_fertilizer_rate_kg_ha = Column(Float)  # Норма удобрения при совмещенном посеве
 
     # Relationships
     operation = relationship("Operation", back_populates="sowing_details")
@@ -294,6 +311,11 @@ class EconomicData(Base):
     revenue_kzt_ha = Column(Float)
     profit_kzt_ha = Column(Float)
     profitability_pct = Column(Float)
+    field_rental_cost = Column(Float)  # Стоимость аренды поля
+    field_rental_period = Column(String(50))  # Период аренды (год, сезон, месяц)
+    machinery_rental_cost = Column(Float)  # Стоимость аренды техники
+    machinery_rental_type = Column(String(50))  # Тип аренды техники (за час, за день, за га)
+    rented_machinery_description = Column(Text)  # Описание арендованной техники
     notes = Column(Text)
 
 
@@ -321,21 +343,45 @@ class WeatherData(Base):
 
 
 class Machinery(Base):
-    """Техника"""
+    """Техника (трактора, комбайны, самоходные опрыскиватели, дроны)"""
     __tablename__ = "machinery"
 
     id = Column(Integer, primary_key=True, index=True)
     farm_id = Column(Integer, ForeignKey("farms.id"), nullable=False)
-    machine_type = Column(String(100))
+    machinery_type = Column(String(50), nullable=False)  # tractor, combine, self_propelled_sprayer, drone, irrigation_system, other
     brand = Column(String(100))
-    model = Column(String(100))
+    model = Column(String(100), nullable=False)
     year = Column(Integer)
     registration_number = Column(String(50))
-    status = Column(String(50))
+    engine_power_hp = Column(Float)
+    fuel_type = Column(String(50))  # diesel, gasoline, electric, hybrid, gas
+    purchase_date = Column(Date)
+    purchase_price = Column(Float)
+    current_value = Column(Float)
+    status = Column(String(20), default='active')  # active, repair, sold, rented_out, rented_in
     notes = Column(Text)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
-    # Relationships
-    equipment = relationship("MachineryEquipment", back_populates="machine", uselist=False)
+
+class Implements(Base):
+    """Агрегаты (сеялки, бороны, культиваторы, прицепные опрыскиватели)"""
+    __tablename__ = "implements"
+
+    id = Column(Integer, primary_key=True, index=True)
+    farm_id = Column(Integer, ForeignKey("farms.id"), nullable=False)
+    implement_type = Column(String(50), nullable=False)  # seeder, planter, plow, cultivator, harrow, disc, deep_loosener, roller, sprayer_trailer, fertilizer_spreader, stubble_breaker, snow_plow, other
+    brand = Column(String(100))
+    model = Column(String(100), nullable=False)
+    year = Column(Integer)
+    working_width_m = Column(Float)
+    purchase_date = Column(Date)
+    purchase_price = Column(Float)
+    current_value = Column(Float)
+    status = Column(String(20), default='active')  # active, repair, sold, rented_out, rented_in
+    notes = Column(Text)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
 
 # ============================================================================
@@ -422,6 +468,92 @@ class SatelliteData(Base):
     image_quality = Column(String(50))
     crop_stage = Column(String(100))
     notes = Column(Text)
+
+
+# ============================================================================
+# ДЕТАЛИ НОВЫХ ТИПОВ ОПЕРАЦИЙ
+# ============================================================================
+
+class DesiccationDetails(Base):
+    """Детали десикации (предуборочное подсушивание)"""
+    __tablename__ = "desiccation_details"
+
+    id = Column(Integer, primary_key=True, index=True)
+    operation_id = Column(Integer, ForeignKey("operations.id"), nullable=False, unique=True)
+    product_name = Column(String(200), nullable=False)
+    active_ingredient = Column(String(200))
+    rate_per_ha = Column(Float)
+    water_rate_l_ha = Column(Float)
+    growth_stage = Column(String(100))
+    target_moisture_percent = Column(Float)
+    temperature_c = Column(Float)
+    wind_speed_ms = Column(Float)
+    humidity_percent = Column(Float)
+
+    # Relationships
+    operation = relationship("Operation", backref="desiccation_details")
+
+
+class TillageDetails(Base):
+    """Детали обработки почвы"""
+    __tablename__ = "tillage_details"
+
+    id = Column(Integer, primary_key=True, index=True)
+    operation_id = Column(Integer, ForeignKey("operations.id"), nullable=False, unique=True)
+    tillage_type = Column(String(50), nullable=False)  # plowing, cultivation, harrowing, stubble_breaking, discing, deep_loosening, rolling
+    depth_cm = Column(Float)
+    tillage_purpose = Column(String(50))  # pre_sowing, post_harvest, weed_control, moisture_retention, fallow
+
+    # Relationships
+    operation = relationship("Operation", backref="tillage_details")
+
+
+class IrrigationDetails(Base):
+    """Детали орошения"""
+    __tablename__ = "irrigation_details"
+
+    id = Column(Integer, primary_key=True, index=True)
+    operation_id = Column(Integer, ForeignKey("operations.id"), nullable=False, unique=True)
+    irrigation_type = Column(String(50))  # sprinkler, drip, furrow, flood, center_pivot
+    water_volume_m3 = Column(Float)
+    water_rate_m3_ha = Column(Float)
+    water_source = Column(String(100))
+    soil_moisture_before_percent = Column(Float)
+    soil_moisture_after_percent = Column(Float)
+    water_quality = Column(String(50))
+
+    # Relationships
+    operation = relationship("Operation", backref="irrigation_details")
+
+
+class SnowRetentionDetails(Base):
+    """Детали снегозадержания"""
+    __tablename__ = "snow_retention_details"
+
+    id = Column(Integer, primary_key=True, index=True)
+    operation_id = Column(Integer, ForeignKey("operations.id"), nullable=False, unique=True)
+    method = Column(String(50))  # snow_plowing, barriers, vegetation
+    snow_depth_before_cm = Column(Float)
+    snow_depth_after_cm = Column(Float)
+    coverage_percent = Column(Float)
+
+    # Relationships
+    operation = relationship("Operation", backref="snow_retention_details")
+
+
+class FallowDetails(Base):
+    """Детали обработки паров"""
+    __tablename__ = "fallow_details"
+
+    id = Column(Integer, primary_key=True, index=True)
+    operation_id = Column(Integer, ForeignKey("operations.id"), nullable=False, unique=True)
+    fallow_type = Column(String(50))  # black, early, green, cultivated
+    processing_depth_cm = Column(Float)
+    weed_control_performed = Column(Boolean, default=False)
+    purpose = Column(Text)
+
+    # Relationships
+    operation = relationship("Operation", backref="fallow_details")
 
 
 # ============================================================================
