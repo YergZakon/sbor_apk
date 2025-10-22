@@ -366,6 +366,8 @@ with tab2:
     # Получение данных
     query = db.query(PhytosanitaryMonitoring, Field).join(
         Field, PhytosanitaryMonitoring.field_id == Field.id
+    ).filter(
+        Field.farm_id == farm.id  # КРИТИЧЕСКИЙ ФИЛЬТР: только мониторинг текущего хозяйства
     )
 
     # Применение фильтров

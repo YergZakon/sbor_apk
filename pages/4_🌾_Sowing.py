@@ -397,7 +397,8 @@ try:
         SowingDetail.seeding_rate_kg_ha,
         SowingDetail.seeding_depth_cm
     ).join(Field).outerjoin(SowingDetail).filter(
-        Operation.operation_type == "sowing"
+        Operation.operation_type == "sowing",
+        Field.farm_id == farm.id  # КРИТИЧЕСКИЙ ФИЛЬТР: только операции текущего хозяйства
     ).order_by(Operation.operation_date.desc()).all()
 
     if sowing_operations:

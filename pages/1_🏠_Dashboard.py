@@ -289,15 +289,14 @@ try:
         st.markdown("### 📜 Последние операции")
 
         # Получение последних 10 операций с фильтрацией по хозяйству
-        recent_operations = filter_query_by_farm(
-            db.query(
-                Operation.operation_date,
-                Operation.operation_type,
-                Field.name.label('field_name'),
-                Operation.crop,
-                Operation.area_processed_ha
-            ).join(Field),
-            Field
+        recent_operations = db.query(
+            Operation.operation_date,
+            Operation.operation_type,
+            Field.name.label('field_name'),
+            Operation.crop,
+            Operation.area_processed_ha
+        ).join(Field).filter(
+            Field.farm_id == farm.id  # КРИТИЧЕСКИЙ ФИЛЬТР: только операции текущего хозяйства
         ).order_by(Operation.operation_date.desc()).limit(10).all()
 
         if recent_operations:
