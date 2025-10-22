@@ -364,6 +364,9 @@ class Machinery(Base):
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
+    # Relationships
+    equipment = relationship("MachineryEquipment", back_populates="machine", uselist=False)
+
 
 class Implements(Base):
     """Агрегаты (сеялки, бороны, культиваторы, прицепные опрыскиватели)"""
