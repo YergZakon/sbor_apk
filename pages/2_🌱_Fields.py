@@ -34,7 +34,19 @@ db = SessionLocal()
 
 try:
     # Проверка наличия хозяйства
-    farm = filter_query_by_farm(db.query(Farm), Farm).first()
+    from modules.auth import get_current_user, is_admin
+    user = get_current_user()
+
+    if is_admin():
+        # Админ может выбрать хозяйство (если нужно, добавьте селектор)
+        farm = db.query(Farm).first()
+    else:
+        # Фермер работает со своим хозяйством
+        user_farm_id = user.get("farm_id") if user else None
+        if user_farm_id:
+            farm = db.query(Farm).filter(Farm.id == user_farm_id).first()
+        else:
+            farm = None
 
     if not farm:
         st.error("❌ Хозяйство не найдено. Обратитесь к администратору для привязки к хозяйству.")
