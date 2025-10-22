@@ -18,6 +18,8 @@ from modules.auth import (
     require_farm_binding,
     filter_query_by_farm,
     get_user_display_name,
+    get_current_user,
+    is_admin,
     can_edit_data,
     can_delete_data
 )
@@ -44,7 +46,14 @@ settings = Settings()
 db = next(get_db())
 
 # Проверка наличия хозяйства
-farm = filter_query_by_farm(db.query(Farm), Farm).first()
+user = get_current_user()
+
+if is_admin():
+    farm = db.query(Farm).first()
+else:
+    user_farm_id = user.get("farm_id") if user else None
+    farm = db.query(Farm).filter(Farm.id == user_farm_id).first() if user_farm_id else None
+
 if not farm:
     st.warning("⚠️ Сначала создайте хозяйство на странице импорта!")
     st.stop()

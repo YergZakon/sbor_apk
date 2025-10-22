@@ -7,7 +7,7 @@ import pandas as pd
 from sqlalchemy.orm import Session
 from modules.database import SessionLocal, Farm, Field, Operation, AgrochemicalAnalysis
 from modules.config import settings
-from modules.auth import require_auth, filter_query_by_farm, get_current_user, get_user_display_name
+from modules.auth import require_auth, filter_query_by_farm, get_current_user, get_user_display_name, is_admin
 import plotly.express as px
 import plotly.graph_objects as go
 
@@ -328,7 +328,13 @@ try:
         st.markdown("---")
         st.markdown("### 🏢 Информация о хозяйстве")
 
-        farm = filter_query_by_farm(db.query(Farm), Farm).first()
+        # Получение хозяйства пользователя
+        if is_admin():
+            farm = db.query(Farm).first()
+        else:
+            user_farm_id = user.get("farm_id") if user else None
+            farm = db.query(Farm).filter(Farm.id == user_farm_id).first() if user_farm_id else None
+
         if farm:
             col1, col2, col3 = st.columns(3)
 
