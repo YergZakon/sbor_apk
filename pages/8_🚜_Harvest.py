@@ -13,7 +13,7 @@ import plotly.graph_objects as go
 import sys
 sys.path.append(str(Path(__file__).parent.parent))
 
-from modules.database import get_db, Farm, Field, Operation, HarvestData, SowingDetail
+from modules.database import get_db, Farm, Field, Operation, HarvestData, SowingDetail, Machinery, Implements
 from modules.auth import (
     require_auth,
     require_farm_binding,
@@ -98,11 +98,18 @@ with tab1:
             )
             selected_field = field_options[selected_field_name]
 
-            # Дата уборки
+            # Дата начала уборки
             harvest_date = st.date_input(
-                "Дата уборки *",
+                "Дата начала уборки *",
                 value=date.today(),
-                help="Дата проведения уборки урожая"
+                help="Дата начала уборки урожая"
+            )
+
+            # Дата окончания уборки
+            end_date = st.date_input(
+                "Дата окончания уборки",
+                value=None,
+                help="Дата окончания уборки (для многодневных работ)"
             )
 
             # Получение посевов на этом поле
@@ -195,6 +202,38 @@ with tab1:
                 value=750,
                 step=10,
                 help="Натура зерна (объемная масса)"
+            )
+
+        # Техника для уборки
+        st.markdown("---")
+        st.markdown("### 🚜 Техника для уборки")
+
+        # Получение списка комбайнов
+        machinery_list = filter_query_by_farm(db.query(Machinery).filter(Machinery.status == 'active'), Machinery).all()
+        combines = [m for m in machinery_list if m.machinery_type == 'combine']
+
+        col_tech1, col_tech2 = st.columns(2)
+
+        with col_tech1:
+            selected_machinery = st.selectbox(
+                "Комбайн",
+                options=[None] + combines,
+                format_func=lambda m: "Не выбрано" if m is None else f"{m.brand or ''} {m.model} ({m.year or '-'})",
+                help="Выберите комбайн для уборки",
+                key="harvest_machinery"
+            )
+
+            machine_year = selected_machinery.year if selected_machinery else None
+
+        with col_tech2:
+            work_speed_kmh = st.number_input(
+                "Рабочая скорость (км/ч)",
+                min_value=0.0,
+                max_value=15.0,
+                value=None,
+                step=0.5,
+                help="Скорость движения комбайна при уборке",
+                key="harvest_speed"
             )
 
         # Качество зерна
@@ -327,7 +366,11 @@ with tab1:
                         field_id=selected_field.id,
                         operation_type="harvest",
                         operation_date=harvest_date,
+                        end_date=end_date if end_date else None,
                         area_processed_ha=area_harvested,
+                        machine_id=selected_machinery.id if selected_machinery else None,
+                        machine_year=machine_year,
+                        work_speed_kmh=work_speed_kmh if work_speed_kmh else None,
                         notes=notes
                     )
                     db.add(operation)

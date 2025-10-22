@@ -13,7 +13,7 @@ import plotly.graph_objects as go
 import sys
 sys.path.append(str(Path(__file__).parent.parent))
 
-from modules.database import get_db, Farm, Field, Operation, PesticideApplication
+from modules.database import get_db, Farm, Field, Operation, PesticideApplication, Machinery, Implements
 from modules.auth import (
     require_auth,
     require_farm_binding,
@@ -233,6 +233,77 @@ with tab1:
                 harvest_allowed_date = application_date + timedelta(days=waiting_period)
                 st.info(f"⏱️ Срок ожидания до уборки: {waiting_period} дней (можно убирать после {format_date(harvest_allowed_date)})")
 
+        # Техника и агрегаты с умной логикой
+        st.markdown("---")
+        st.markdown("### 🚜 Техника для опрыскивания")
+
+        # Получение списка техники и агрегатов
+        machinery_list = filter_query_by_farm(db.query(Machinery).filter(Machinery.status == 'active'), Machinery).all()
+        implements_list = filter_query_by_farm(db.query(Implements).filter(Implements.status == 'active'), Implements).all()
+
+        col_tech1, col_tech2, col_tech3 = st.columns(3)
+
+        with col_tech1:
+            # Фильтруем технику для опрыскивания: тракторы, самоходные опрыскиватели, дроны
+            spray_machinery = [m for m in machinery_list if m.machinery_type in ['tractor', 'self_propelled_sprayer', 'drone']]
+
+            selected_machinery = st.selectbox(
+                "Техника *",
+                options=[None] + spray_machinery,
+                format_func=lambda m: "Не выбрано" if m is None else f"{m.brand or ''} {m.model} ({m.machinery_type})",
+                help="Трактор, самоходный опрыскиватель или дрон",
+                key="pest_machinery"
+            )
+
+            machine_year = selected_machinery.year if selected_machinery else None
+
+            # Определяем, нужен ли агрегат
+            needs_implement = False
+            if selected_machinery:
+                if selected_machinery.machinery_type in ['self_propelled_sprayer', 'drone']:
+                    st.info("✅ Самоходная техника - агрегат не требуется")
+                    needs_implement = False
+                elif selected_machinery.machinery_type == 'tractor':
+                    st.warning("⚠️ Для трактора требуется прицепной опрыскиватель")
+                    needs_implement = True
+
+        with col_tech2:
+            # Фильтруем только прицепные опрыскиватели
+            trailer_sprayers = [impl for impl in implements_list if impl.implement_type == 'sprayer_trailer']
+
+            if needs_implement:
+                selected_implement = st.selectbox(
+                    "Опрыскиватель (прицепной) *",
+                    options=[None] + trailer_sprayers,
+                    format_func=lambda i: "Не выбрано" if i is None else f"{i.brand or ''} {i.model} ({i.working_width_m or '-'}м)",
+                    help="Выберите прицепной опрыскиватель",
+                    key="pest_implement"
+                )
+
+                implement_year = selected_implement.year if selected_implement else None
+            else:
+                st.info("Агрегат не требуется для выбранной техники")
+                selected_implement = None
+                implement_year = None
+
+        with col_tech3:
+            end_date = st.date_input(
+                "Дата окончания",
+                value=None,
+                help="Для многодневных операций",
+                key="pest_end_date"
+            )
+
+            work_speed_kmh = st.number_input(
+                "Рабочая скорость (км/ч)",
+                min_value=0.0,
+                max_value=25.0,
+                value=None,
+                step=0.5,
+                help="Скорость движения при опрыскивании",
+                key="pest_speed"
+            )
+
         # Погодные условия
         st.markdown("---")
         st.markdown("### 🌤️ Погодные условия")
@@ -322,7 +393,13 @@ with tab1:
                         field_id=selected_field.id,
                         operation_type="spraying",
                         operation_date=application_date,
+                        end_date=end_date if end_date else None,
                         area_processed_ha=area_processed,
+                        machine_id=selected_machinery.id if selected_machinery else None,
+                        implement_id=selected_implement.id if selected_implement else None,
+                        machine_year=machine_year,
+                        implement_year=implement_year,
+                        work_speed_kmh=work_speed_kmh if work_speed_kmh else None,
                         notes=notes
                     )
                     db.add(operation)
