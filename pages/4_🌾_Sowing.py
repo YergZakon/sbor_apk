@@ -7,7 +7,7 @@ import pandas as pd
 import json
 from datetime import datetime, date
 from sqlalchemy.orm import Session
-from modules.database import SessionLocal, Farm, Field, Operation, SowingDetail
+from modules.database import SessionLocal, Farm, Field, Operation, SowingDetail, Machinery, Implements
 from modules.auth import (
     require_auth,
     require_farm_binding,
@@ -85,15 +85,26 @@ try:
             selected_field = field_options[selected_field_name]
 
         with col2:
-            # Дата посева
+            # Дата начала посева
             sowing_date = st.date_input(
-                "Дата посева*",
+                "Дата начала посева*",
                 value=datetime.now().date(),
                 max_value=datetime.now().date(),
-                help="Дата проведения посевных работ"
+                help="Дата начала посевных работ"
             )
 
         with col3:
+            # Дата окончания посева
+            end_date = st.date_input(
+                "Дата окончания",
+                value=None,
+                max_value=datetime.now().date(),
+                help="Дата окончания посевных работ (для многодневных операций)"
+            )
+
+        col1, col2 = st.columns(2)
+
+        with col1:
             # Обработанная площадь
             area_processed = st.number_input(
                 "Площадь посева (га)*",
@@ -102,6 +113,17 @@ try:
                 value=float(selected_field.area_ha),
                 step=0.1,
                 help="Фактически засеянная площадь"
+            )
+
+        with col2:
+            # Рабочая скорость
+            work_speed_kmh = st.number_input(
+                "Рабочая скорость (км/ч)",
+                min_value=0.0,
+                max_value=25.0,
+                value=None,
+                step=0.5,
+                help="Скорость движения агрегата во время посева"
             )
 
         st.markdown("---")
@@ -202,6 +224,102 @@ try:
             )
 
         st.markdown("---")
+        st.markdown("#### 🌾 Семенной материал")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            seed_reproduction = st.selectbox(
+                "Репродукция семян",
+                options=['Элита', 'Суперэлита', '1-я репродукция', '2-я репродукция', '3-я репродукция', 'Другое'],
+                index=None,
+                help="Репродукция используемого семенного материала"
+            )
+
+        with col2:
+            seed_origin_country = st.text_input(
+                "Страна происхождения семян",
+                placeholder="Например: Казахстан, Россия, Канада",
+                help="Страна производства семенного материала"
+            )
+
+        # Совмещенный посев с удобрениями
+        st.markdown("---")
+        st.markdown("#### 🌱 Совмещенный посев с удобрениями")
+
+        combined_with_fertilizer = st.checkbox(
+            "Совмещенный посев с внесением удобрений",
+            value=False,
+            help="Отметьте, если удобрения вносились одновременно с посевом"
+        )
+
+        if combined_with_fertilizer:
+            col1, col2 = st.columns(2)
+
+            with col1:
+                combined_fertilizer_name = st.text_input(
+                    "Название удобрения",
+                    placeholder="Например: Аммофос, NPK 16:16:16",
+                    help="Название удобрения, внесенного при посеве"
+                )
+
+            with col2:
+                combined_fertilizer_rate = st.number_input(
+                    "Норма внесения (кг/га)",
+                    min_value=0.0,
+                    max_value=500.0,
+                    value=None,
+                    step=5.0,
+                    help="Норма внесения удобрения при посеве"
+                )
+        else:
+            combined_fertilizer_name = None
+            combined_fertilizer_rate = None
+
+        st.markdown("---")
+        st.markdown("#### 🚜 Техника и агрегаты")
+
+        # Получение списка техники и агрегатов
+        machinery_list = filter_query_by_farm(db.query(Machinery).filter(Machinery.status == 'active'), Machinery).all()
+        implements_list = filter_query_by_farm(db.query(Implements).filter(Implements.status == 'active'), Implements).all()
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            selected_machinery = st.selectbox(
+                "Техника (трактор)",
+                options=[None] + machinery_list,
+                format_func=lambda m: "Не выбрано" if m is None else f"{m.brand or ''} {m.model} ({m.year or '-'})",
+                help="Выберите трактор или другую технику"
+            )
+
+            if selected_machinery:
+                machine_year = selected_machinery.year
+                st.caption(f"Год выпуска: {machine_year or 'не указан'}")
+            else:
+                machine_year = None
+
+        with col2:
+            # Фильтруем только сеялки
+            seeders = [impl for impl in implements_list if impl.implement_type in ['seeder', 'planter']]
+
+            selected_implement = st.selectbox(
+                "Агрегат (сеялка)",
+                options=[None] + seeders,
+                format_func=lambda i: "Не выбрано" if i is None else f"{i.brand or ''} {i.model} ({i.working_width_m or '-'}м)",
+                help="Выберите сеялку или сажалку"
+            )
+
+            if selected_implement:
+                implement_year = selected_implement.year
+                st.caption(f"Год выпуска: {implement_year or 'не указан'}, Ширина: {selected_implement.working_width_m or '-'}м")
+            else:
+                implement_year = None
+
+        if not machinery_list and not implements_list:
+            st.info("💡 Техника не добавлена. Перейдите в раздел 'Техника' для добавления.")
+
+        st.markdown("---")
         st.markdown("#### 🌡️ Условия посева (опционально)")
 
         col1, col2, col3 = st.columns(3)
@@ -234,7 +352,7 @@ try:
             )
 
         st.markdown("---")
-        st.markdown("#### 🚜 Техника и оператор")
+        st.markdown("#### 👤 Механизатор и примечания")
 
         col1, col2 = st.columns(2)
 
@@ -322,9 +440,15 @@ try:
                         field_id=selected_field.id,
                         operation_type="sowing",
                         operation_date=sowing_date,
+                        end_date=end_date if end_date else None,
                         crop=selected_crop,
                         variety=selected_variety if selected_variety != "Не указан" else None,
                         area_processed_ha=area_processed,
+                        machine_id=selected_machinery.id if selected_machinery else None,
+                        implement_id=selected_implement.id if selected_implement else None,
+                        machine_year=machine_year,
+                        implement_year=implement_year,
+                        work_speed_kmh=work_speed_kmh if work_speed_kmh else None,
                         operator=operator if operator else None,
                         weather_conditions=weather_conditions if weather_conditions else None,
                         notes=notes if notes else None
@@ -344,7 +468,12 @@ try:
                         seed_treatment=seed_treatment if seed_treatment else None,
                         soil_temp_c=soil_temp if soil_temp else None,
                         soil_moisture_percent=soil_moisture if soil_moisture else None,
-                        total_seeds_kg=total_seeds_needed
+                        total_seeds_kg=total_seeds_needed,
+                        seed_reproduction=seed_reproduction if seed_reproduction else None,
+                        seed_origin_country=seed_origin_country if seed_origin_country else None,
+                        combined_with_fertilizer=combined_with_fertilizer,
+                        combined_fertilizer_name=combined_fertilizer_name if combined_with_fertilizer else None,
+                        combined_fertilizer_rate_kg_ha=combined_fertilizer_rate if combined_with_fertilizer else None
                     )
 
                     db.add(sowing_detail)

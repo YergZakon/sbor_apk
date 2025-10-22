@@ -13,7 +13,7 @@ import plotly.graph_objects as go
 import sys
 sys.path.append(str(Path(__file__).parent.parent))
 
-from modules.database import get_db, Farm, Field, Operation, FertilizerApplication
+from modules.database import get_db, Farm, Field, Operation, FertilizerApplication, Machinery, Implements
 from modules.auth import (
     require_auth,
     require_farm_binding,
@@ -166,6 +166,59 @@ with tab1:
                 help="Цель внесения удобрений"
             )
 
+        # Техника и агрегаты
+        st.markdown("---")
+        st.markdown("### 🚜 Техника и агрегаты")
+
+        # Получение списка техники и агрегатов
+        machinery_list = filter_query_by_farm(db.query(Machinery).filter(Machinery.status == 'active'), Machinery).all()
+        implements_list = filter_query_by_farm(db.query(Implements).filter(Implements.status == 'active'), Implements).all()
+
+        col_tech1, col_tech2, col_tech3 = st.columns(3)
+
+        with col_tech1:
+            selected_machinery = st.selectbox(
+                "Техника (трактор)",
+                options=[None] + machinery_list,
+                format_func=lambda m: "Не выбрано" if m is None else f"{m.brand or ''} {m.model} ({m.year or '-'})",
+                help="Выберите трактор или другую технику",
+                key="fert_machinery"
+            )
+
+            machine_year = selected_machinery.year if selected_machinery else None
+
+        with col_tech2:
+            # Фильтруем разбрасыватели удобрений
+            fertilizer_spreaders = [impl for impl in implements_list if impl.implement_type == 'fertilizer_spreader']
+
+            selected_implement = st.selectbox(
+                "Агрегат (разбрасыватель)",
+                options=[None] + fertilizer_spreaders,
+                format_func=lambda i: "Не выбрано" if i is None else f"{i.brand or ''} {i.model} ({i.working_width_m or '-'}м)",
+                help="Выберите разбрасыватель удобрений",
+                key="fert_implement"
+            )
+
+            implement_year = selected_implement.year if selected_implement else None
+
+        with col_tech3:
+            end_date = st.date_input(
+                "Дата окончания",
+                value=None,
+                help="Для многодневных операций",
+                key="fert_end_date"
+            )
+
+            work_speed_kmh = st.number_input(
+                "Рабочая скорость (км/ч)",
+                min_value=0.0,
+                max_value=25.0,
+                value=None,
+                step=0.5,
+                help="Скорость движения агрегата",
+                key="fert_speed"
+            )
+
         # Расчет д.в. (действующего вещества)
         st.markdown("---")
         st.markdown("### 🧮 Расчет действующего вещества (NPK)")
@@ -255,7 +308,13 @@ with tab1:
                         field_id=selected_field.id,
                         operation_type="fertilizing",
                         operation_date=application_date,
+                        end_date=end_date if end_date else None,
                         area_processed_ha=area_processed,
+                        machine_id=selected_machinery.id if selected_machinery else None,
+                        implement_id=selected_implement.id if selected_implement else None,
+                        machine_year=machine_year,
+                        implement_year=implement_year,
+                        work_speed_kmh=work_speed_kmh if work_speed_kmh else None,
                         notes=notes
                     )
                     db.add(operation)
