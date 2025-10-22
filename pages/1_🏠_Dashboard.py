@@ -26,13 +26,6 @@ st.caption(f"Добро пожаловать, **{get_user_display_name()}**!")
 db = SessionLocal()
 
 try:
-    # Получение хозяйства пользователя
-    if is_admin():
-        farm = db.query(Farm).first()
-    else:
-        user_farm_id = user.get("farm_id") if user else None
-        farm = db.query(Farm).filter(Farm.id == user_farm_id).first() if user_farm_id else None
-
     # ============================================================================
     # ОСНОВНЫЕ МЕТРИКИ
     # ============================================================================
@@ -41,6 +34,13 @@ try:
 
     # Получение данных с учетом прав доступа
     farms_count = filter_query_by_farm(db.query(Farm), Farm).count()
+
+    # Получение хозяйства пользователя (после подсчета farms_count)
+    if is_admin():
+        farm = db.query(Farm).first()
+    else:
+        user_farm_id = user.get("farm_id") if user else None
+        farm = db.query(Farm).filter(Farm.id == user_farm_id).first() if user_farm_id else None
     fields_count = filter_query_by_farm(db.query(Field), Field).count()
     operations_count = filter_query_by_farm(db.query(Operation), Operation).count()
 
@@ -292,7 +292,7 @@ try:
     # ПОСЛЕДНИЕ ОПЕРАЦИИ
     # ============================================================================
 
-    if operations_count > 0:
+    if operations_count > 0 and farm:
         st.markdown("### 📜 Последние операции")
 
         # Получение последних 10 операций с фильтрацией по хозяйству
