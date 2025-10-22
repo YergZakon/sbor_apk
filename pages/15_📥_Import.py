@@ -645,6 +645,97 @@ try:
                                     db.rollback()
                                     st.error(f"❌ Ошибка при импорте: {str(e)}")
 
+                elif "06 - Экономические" in selected_type:
+                    # Импорт экономических данных
+                    df = pd.read_excel(uploaded_file)
+
+                    st.success(f"✅ Файл прочитан! Найдено строк: {len(df)}")
+
+                    # Превью
+                    st.markdown("#### Превью данных:")
+                    st.dataframe(df.head(10), use_container_width=True)
+
+                    # Валидация
+                    st.markdown("#### ✅ Валидация данных")
+
+                    errors = []
+                    valid_rows = 0
+
+                    # Проверка обязательных колонок
+                    required_cols = ['ID поля', 'Год', 'Культура']
+                    for col in required_cols:
+                        if col not in df.columns:
+                            errors.append(f"Отсутствует обязательная колонка: {col}")
+
+                    if not errors:
+                        for idx, row in df.iterrows():
+                            if pd.isna(row.get('ID поля')) or pd.isna(row.get('Год')):
+                                continue
+                            valid_rows += 1
+
+                        st.info(f"ℹ️ Найдено валидных строк: {valid_rows}")
+
+                    # Показать результаты
+                    if errors:
+                        st.error(f"❌ Найдено ошибок: {len(errors)}")
+                        for error in errors:
+                            st.error(f"  • {error}")
+                    else:
+                        st.success("✅ Данные готовы к импорту!")
+
+                    # Кнопка импорта
+                    if not errors and valid_rows > 0:
+                        if st.button("📥 Импортировать экономические данные", type="primary"):
+                            with st.spinner(f"Импорт {valid_rows} записей..."):
+                                try:
+                                    if not farm:
+                                        st.error("❌ Сначала импортируйте данные хозяйства (тип 01)")
+                                        st.stop()
+
+                                    imported_count = 0
+
+                                    for idx, row in df.iterrows():
+                                        if pd.isna(row.get('ID поля')) or pd.isna(row.get('Год')):
+                                            continue
+
+                                        field_code = str(row['ID поля'])
+                                        field = db.query(Field).filter(Field.field_code == field_code).first()
+
+                                        if not field:
+                                            continue
+
+                                        year = int(row['Год'])
+                                        crop = str(row.get('Культура')) if not pd.isna(row.get('Культура')) else None
+
+                                        # Создание экономических данных
+                                        economic_data = EconomicData(
+                                            farm_id=farm.id,
+                                            field_id=field.id,
+                                            year=year,
+                                            crop=crop,
+                                            revenue_per_ha=row.get('Выручка (тг/га)') if not pd.isna(row.get('Выручка (тг/га)')) else None,
+                                            costs_per_ha=row.get('Затраты (тг/га)') if not pd.isna(row.get('Затраты (тг/га)')) else None,
+                                            profit_per_ha=row.get('Прибыль (тг/га)') if not pd.isna(row.get('Прибыль (тг/га)')) else None,
+                                            profitability_percent=row.get('Рентабельность (%)') if not pd.isna(row.get('Рентабельность (%)')) else None,
+                                            subsidy_per_ha=row.get('Субсидии (тг/га)') if not pd.isna(row.get('Субсидии (тг/га)')) else None,
+                                            # Rental fields
+                                            field_rental_cost=row.get('Аренда поля (тг/га)') if not pd.isna(row.get('Аренда поля (тг/га)')) else None,
+                                            field_rental_period=str(row.get('Период аренды поля')) if not pd.isna(row.get('Период аренды поля')) else None,
+                                            machinery_rental_cost=row.get('Аренда техники (тг)') if not pd.isna(row.get('Аренда техники (тг)')) else None,
+                                            machinery_rental_type=str(row.get('Тип аренды техники')) if not pd.isna(row.get('Тип аренды техники')) else None,
+                                            rented_machinery_description=str(row.get('Описание арендованной техники')) if not pd.isna(row.get('Описание арендованной техники')) else None
+                                        )
+                                        db.add(economic_data)
+                                        imported_count += 1
+
+                                    db.commit()
+                                    st.success(f"✅ Успешно импортировано {imported_count} записей экономических данных!")
+                                    st.balloons()
+
+                                except Exception as e:
+                                    db.rollback()
+                                    st.error(f"❌ Ошибка при импорте: {str(e)}")
+
                 else:
                     # Общий импорт для других типов
                     df = pd.read_excel(uploaded_file)
@@ -664,6 +755,7 @@ try:
                     - ✅ Агрохимические анализы (тип 03)
                     - ✅ Журнал полевых работ (тип 04)
                     - ✅ Урожайность (тип 05)
+                    - ✅ Экономические данные (тип 06)
 
                     Остальные типы в разработке.
                     """)
