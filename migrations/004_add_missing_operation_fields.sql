@@ -1,6 +1,6 @@
 -- Migration: Add missing fields to operation detail tables
 -- Date: 2025-10-23
--- Description: Add missing fields to irrigation_details, snow_retention_details, and fallow_details
+-- Description: Add missing fields to irrigation_details, snow_retention_details, fallow_details, and tillage_details
 
 BEGIN;
 
@@ -36,5 +36,14 @@ ADD COLUMN IF NOT EXISTS number_of_treatments INTEGER;
 
 COMMENT ON COLUMN fallow_details.number_of_treatments
 IS 'Количество обработок паровых полей';
+
+-- ============================================================
+-- Add soil_moisture to tillage_details
+-- ============================================================
+ALTER TABLE tillage_details
+ADD COLUMN IF NOT EXISTS soil_moisture VARCHAR(50);
+
+COMMENT ON COLUMN tillage_details.soil_moisture
+IS 'Влажность почвы (сухая, нормальная, влажная)';
 
 COMMIT;

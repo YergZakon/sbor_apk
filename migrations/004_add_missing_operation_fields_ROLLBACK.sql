@@ -9,5 +9,6 @@ ALTER TABLE irrigation_details DROP COLUMN IF EXISTS soil_moisture_before;
 ALTER TABLE snow_retention_details DROP COLUMN IF EXISTS snow_depth_cm;
 ALTER TABLE snow_retention_details DROP COLUMN IF EXISTS number_of_passes;
 ALTER TABLE fallow_details DROP COLUMN IF EXISTS number_of_treatments;
+ALTER TABLE tillage_details DROP COLUMN IF EXISTS soil_moisture;
 
 COMMIT;

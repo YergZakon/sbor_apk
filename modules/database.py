@@ -507,6 +507,7 @@ class TillageDetails(Base):
     operation_id = Column(Integer, ForeignKey("operations.id"), nullable=False, unique=True)
     tillage_type = Column(String(50), nullable=False)  # plowing, cultivation, harrowing, stubble_breaking, discing, deep_loosening, rolling
     depth_cm = Column(Float)
+    soil_moisture = Column(String(50))  # Влажность почвы (сухая, нормальная, влажная)
     tillage_purpose = Column(String(50))  # pre_sowing, post_harvest, weed_control, moisture_retention, fallow
 
     # Relationships

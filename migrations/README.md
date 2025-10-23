@@ -43,6 +43,7 @@ Adds missing fields to multiple operation detail tables:
 - `snow_retention_details.snow_depth_cm` (FLOAT)
 - `snow_retention_details.number_of_passes` (INTEGER)
 - `fallow_details.number_of_treatments` (INTEGER)
+- `tillage_details.soil_moisture` (VARCHAR(50))
 
 **To apply:**
 ```sql
@@ -127,6 +128,13 @@ ADD COLUMN IF NOT EXISTS number_of_treatments INTEGER;
 COMMENT ON COLUMN fallow_details.number_of_treatments
 IS 'Количество обработок паровых полей';
 
+-- Add to tillage_details
+ALTER TABLE tillage_details
+ADD COLUMN IF NOT EXISTS soil_moisture VARCHAR(50);
+
+COMMENT ON COLUMN tillage_details.soil_moisture
+IS 'Влажность почвы (сухая, нормальная, влажная)';
+
 COMMIT;
 ```
 
@@ -153,7 +161,7 @@ ORDER BY ordinal_position;
 |---|------|-------------|--------|
 | 002 | 2025-10-23 | Add implement types (header, mower, baler) | Pending |
 | 003 | 2025-10-23 | Add desiccation application_method field | Pending |
-| 004 | 2025-10-23 | Add missing operation detail fields (4 fields) | Pending |
+| 004 | 2025-10-23 | Add missing operation detail fields (5 fields) | Pending |
 
 ## Rollback Instructions
 
