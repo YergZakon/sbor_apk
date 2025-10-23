@@ -488,6 +488,7 @@ class DesiccationDetails(Base):
     active_ingredient = Column(String(200))
     rate_per_ha = Column(Float)
     water_rate_l_ha = Column(Float)
+    application_method = Column(String(100))  # Способ применения
     growth_stage = Column(String(100))
     target_moisture_percent = Column(Float)
     temperature_c = Column(Float)
