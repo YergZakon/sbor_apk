@@ -523,7 +523,8 @@ class IrrigationDetails(Base):
     water_volume_m3 = Column(Float)
     water_rate_m3_ha = Column(Float)
     water_source = Column(String(100))
-    soil_moisture_before_percent = Column(Float)
+    soil_moisture_before = Column(Float)  # Влажность почвы до (%)
+    soil_moisture_before_percent = Column(Float)  # Legacy field
     soil_moisture_after_percent = Column(Float)
     water_quality = Column(String(50))
 
@@ -538,8 +539,10 @@ class SnowRetentionDetails(Base):
     id = Column(Integer, primary_key=True, index=True)
     operation_id = Column(Integer, ForeignKey("operations.id"), nullable=False, unique=True)
     method = Column(String(50))  # snow_plowing, barriers, vegetation
-    snow_depth_before_cm = Column(Float)
+    snow_depth_cm = Column(Float)  # Глубина снега (см)
+    snow_depth_before_cm = Column(Float)  # Legacy field
     snow_depth_after_cm = Column(Float)
+    number_of_passes = Column(Integer)  # Количество проходов
     coverage_percent = Column(Float)
 
     # Relationships
@@ -554,6 +557,7 @@ class FallowDetails(Base):
     operation_id = Column(Integer, ForeignKey("operations.id"), nullable=False, unique=True)
     fallow_type = Column(String(50))  # black, early, green, cultivated
     processing_depth_cm = Column(Float)
+    number_of_treatments = Column(Integer)  # Количество обработок
     weed_control_performed = Column(Boolean, default=False)
     purpose = Column(Text)
 

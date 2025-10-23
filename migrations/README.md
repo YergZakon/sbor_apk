@@ -33,6 +33,23 @@ Adds missing `application_method` field to `desiccation_details` table.
 -- Copy and execute migrations/003_add_desiccation_application_method.sql
 ```
 
+### Migration 004: Add Missing Operation Detail Fields
+**Status:** ⚠️ NEEDS TO BE APPLIED ON SUPABASE
+**File:** `004_add_missing_operation_fields.sql`
+**Date:** 2025-10-23
+
+Adds missing fields to multiple operation detail tables:
+- `irrigation_details.soil_moisture_before` (FLOAT)
+- `snow_retention_details.snow_depth_cm` (FLOAT)
+- `snow_retention_details.number_of_passes` (INTEGER)
+- `fallow_details.number_of_treatments` (INTEGER)
+
+**To apply:**
+```sql
+-- Run in Supabase SQL Editor:
+-- Copy and execute migrations/004_add_missing_operation_fields.sql
+```
+
 ## How to Apply Migrations on Supabase
 
 1. Go to your Supabase Dashboard
@@ -77,6 +94,40 @@ COMMENT ON COLUMN desiccation_details.application_method
 IS 'Способ применения (Наземное/Авиационное опрыскивание)';
 
 COMMIT;
+
+-- ============================================================
+-- MIGRATION 004: Add missing operation detail fields
+-- ============================================================
+BEGIN;
+
+-- Add to irrigation_details
+ALTER TABLE irrigation_details
+ADD COLUMN IF NOT EXISTS soil_moisture_before FLOAT;
+
+COMMENT ON COLUMN irrigation_details.soil_moisture_before
+IS 'Влажность почвы до орошения (%)';
+
+-- Add to snow_retention_details
+ALTER TABLE snow_retention_details
+ADD COLUMN IF NOT EXISTS snow_depth_cm FLOAT;
+
+ALTER TABLE snow_retention_details
+ADD COLUMN IF NOT EXISTS number_of_passes INTEGER;
+
+COMMENT ON COLUMN snow_retention_details.snow_depth_cm
+IS 'Глубина снежного покрова (см)';
+
+COMMENT ON COLUMN snow_retention_details.number_of_passes
+IS 'Количество проходов техники';
+
+-- Add to fallow_details
+ALTER TABLE fallow_details
+ADD COLUMN IF NOT EXISTS number_of_treatments INTEGER;
+
+COMMENT ON COLUMN fallow_details.number_of_treatments
+IS 'Количество обработок паровых полей';
+
+COMMIT;
 ```
 
 ## Verification
@@ -102,6 +153,7 @@ ORDER BY ordinal_position;
 |---|------|-------------|--------|
 | 002 | 2025-10-23 | Add implement types (header, mower, baler) | Pending |
 | 003 | 2025-10-23 | Add desiccation application_method field | Pending |
+| 004 | 2025-10-23 | Add missing operation detail fields (4 fields) | Pending |
 
 ## Rollback Instructions
 
