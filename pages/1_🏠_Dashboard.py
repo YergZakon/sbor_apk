@@ -33,14 +33,16 @@ try:
     st.markdown("### 📊 Основные показатели")
 
     # Получение данных с учетом прав доступа
-    farms_count = filter_query_by_farm(db.query(Farm), Farm).count()
-
-    # Получение хозяйства пользователя (после подсчета farms_count)
+    # Для обычного пользователя - только его хозяйство (всегда 1)
+    # Для админа - все хозяйства в системе
     if is_admin():
+        farms_count = db.query(Farm).count()
         farm = db.query(Farm).first()
     else:
         user_farm_id = user.get("farm_id") if user else None
         farm = db.query(Farm).filter(Farm.id == user_farm_id).first() if user_farm_id else None
+        farms_count = 1 if farm else 0
+
     fields_count = filter_query_by_farm(db.query(Field), Field).count()
     operations_count = filter_query_by_farm(db.query(Operation), Operation).count()
 
@@ -53,16 +55,16 @@ try:
 
     with col1:
         st.metric(
-            label="Хозяйств зарегистрировано",
-            value=farms_count,
-            delta="+1" if farms_count > 0 else None
+            label="Хозяйств зарегистрировано" if is_admin() else "Хозяйство",
+            value=farms_count if is_admin() else (farm.name if farm else "Не зарегистрировано"),
+            delta=None
         )
 
     with col2:
         st.metric(
             label="Полей добавлено",
             value=fields_count,
-            delta=f"{fields_count}/25" if fields_count > 0 else None
+            delta=f"📊 Всего полей" if fields_count > 0 else None
         )
 
     with col3:
@@ -76,7 +78,7 @@ try:
         st.metric(
             label="Операций выполнено",
             value=operations_count,
-            delta="+5" if operations_count > 0 else None
+            delta=f"📈 Операции" if operations_count > 0 else None
         )
 
     st.markdown("---")
@@ -88,9 +90,11 @@ try:
     st.markdown("### 📈 Полнота данных")
 
     # Расчет полноты данных по категориям
+    # Для полей: 100% если есть поля, иначе 0%
+    # Для операций: показываем прогресс до 100 операций как ориентир
     data_completeness = {
         "Общая информация хозяйства": 100 if farms_count > 0 else 0,
-        "Паспорта полей": min(100, (fields_count / 25) * 100) if fields_count > 0 else 0,
+        "Паспорта полей": 100 if fields_count > 0 else 0,
         "Агрохимические анализы": 0,  # Будет рассчитано позже
         "Полевые работы": min(100, (operations_count / 100) * 100) if operations_count > 0 else 0,
         "Урожайность": 0,
@@ -212,12 +216,13 @@ try:
     if fields_count == 0:
         notifications.append({
             "type": "warning",
-            "message": "⚠️ Не добавлено ни одного поля. Перейдите в раздел 'Fields' для добавления."
+            "message": "⚠️ Не добавлено ни одного поля. Перейдите в раздел 'Управление полями' для добавления."
         })
-    elif fields_count < 5:
+    elif farm and farm.arable_area_ha and fields_count < 10:
+        # Показываем уведомление только если полей мало относительно площади хозяйства
         notifications.append({
             "type": "info",
-            "message": f"ℹ️ Добавлено только {fields_count} полей. Рекомендуется добавить все поля хозяйства."
+            "message": f"ℹ️ Добавлено {fields_count} полей. Убедитесь, что внесены все поля хозяйства."
         })
 
     # Проверка агрохимических анализов
@@ -378,6 +383,6 @@ with st.sidebar:
     st.markdown(f"""
     - Полнота данных: **>70%**
     - ML-готовность: **>90%**
-    - Поля: **25+**
+    - Все поля внесены: **✓**
     - Операции: **100+**
     """)
