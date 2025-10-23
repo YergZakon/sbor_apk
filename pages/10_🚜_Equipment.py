@@ -68,11 +68,35 @@ try:
         machinery_list = filter_query_by_farm(db.query(Machinery), Machinery).all()
 
         if machinery_list:
-            # Создание DataFrame
+            # Pre-load all attributes to avoid DetachedInstanceError
             machinery_data = []
+            active_count = 0
+            total_value = 0
+            total_power = 0
+
             for m in machinery_list:
+                # Eagerly access all attributes while in session
+                m_id = m.id
+                m_type = m.machinery_type
+                m_brand = m.brand
+                m_model = m.model
+                m_year = m.year
+                m_reg = m.registration_number
+                m_power = m.engine_power_hp
+                m_fuel = m.fuel_type
+                m_status = m.status
+                m_value = m.current_value
+
+                # Count for statistics
+                if m_status == 'active':
+                    active_count += 1
+                if m_value:
+                    total_value += m_value
+                if m_power:
+                    total_power += m_power
+
                 machinery_data.append({
-                    'ID': m.id,
+                    'ID': m_id,
                     'Тип': {
                         'tractor': 'Трактор',
                         'combine': 'Комбайн',
@@ -80,37 +104,34 @@ try:
                         'drone': 'Дрон',
                         'irrigation_system': 'Система орошения',
                         'other': 'Другое'
-                    }.get(m.machinery_type, m.machinery_type),
-                    'Марка': m.brand or '-',
-                    'Модель': m.model,
-                    'Год': m.year or '-',
-                    'Рег. номер': m.registration_number or '-',
-                    'Мощность (л.с.)': m.engine_power_hp or '-',
-                    'Топливо': m.fuel_type or '-',
+                    }.get(m_type, m_type),
+                    'Марка': m_brand or '-',
+                    'Модель': m_model,
+                    'Год': str(m_year) if m_year else '-',
+                    'Рег. номер': m_reg or '-',
+                    'Мощность (л.с.)': str(m_power) if m_power else '-',
+                    'Топливо': m_fuel or '-',
                     'Статус': {
                         'active': '✅ Активна',
                         'maintenance': '🔧 Ремонт',
                         'inactive': '❌ Неактивна',
                         'sold': '💰 Продана'
-                    }.get(m.status, m.status),
-                    'Стоимость': f"{m.current_value:,.0f} тг" if m.current_value else '-'
+                    }.get(m_status, m_status),
+                    'Стоимость': f"{m_value:,.0f} тг" if m_value else '-'
                 })
 
             df_machinery = pd.DataFrame(machinery_data)
-            st.dataframe(df_machinery, use_container_width=True, hide_index=True)
+            st.dataframe(df_machinery, width='stretch', hide_index=True)
 
             # Статистика
             col1, col2, col3, col4 = st.columns(4)
             with col1:
                 st.metric("Всего единиц", len(machinery_list))
             with col2:
-                active_count = len([m for m in machinery_list if m.status == 'active'])
                 st.metric("Активных", active_count)
             with col3:
-                total_value = sum([m.current_value for m in machinery_list if m.current_value])
                 st.metric("Общая стоимость", f"{total_value:,.0f} тг")
             with col4:
-                total_power = sum([m.engine_power_hp for m in machinery_list if m.engine_power_hp])
                 st.metric("Общая мощность", f"{total_power:,.0f} л.с.")
         else:
             st.info("Техника не добавлена. Добавьте первую единицу техники ниже.")
@@ -221,18 +242,29 @@ try:
         if machinery_list and can_delete_data():
             st.markdown("### 🗑️ Удалить технику")
 
-            machinery_to_delete = st.selectbox(
+            # Pre-load attributes for delete selectbox
+            machinery_delete_options = {}
+            for m in machinery_list:
+                display = f"{m.brand or ''} {m.model} ({m.year or '-'}) - {m.registration_number or 'без номера'}"
+                machinery_delete_options[display] = m.id
+
+            selected_machinery_to_delete = st.selectbox(
                 "Выберите технику для удаления",
-                options=machinery_list,
-                format_func=lambda m: f"{m.brand or ''} {m.model} ({m.year or '-'}) - {m.registration_number or 'без номера'}"
+                options=list(machinery_delete_options.keys()),
+                key="delete_machinery_select"
             )
 
             if st.button("🗑️ Удалить выбранную технику", type="secondary"):
                 try:
-                    db.delete(machinery_to_delete)
-                    db.commit()
-                    st.success("✅ Техника удалена")
-                    st.rerun()
+                    machinery_id_to_delete = machinery_delete_options[selected_machinery_to_delete]
+                    machinery_obj = db.query(Machinery).filter(Machinery.id == machinery_id_to_delete).first()
+                    if machinery_obj:
+                        db.delete(machinery_obj)
+                        db.commit()
+                        st.success("✅ Техника удалена")
+                        st.rerun()
+                    else:
+                        st.error("❌ Техника не найдена")
                 except Exception as e:
                     db.rollback()
                     st.error(f"❌ Ошибка при удалении: {e}")
@@ -249,11 +281,30 @@ try:
         implements_list = filter_query_by_farm(db.query(Implements), Implements).all()
 
         if implements_list:
-            # Создание DataFrame
+            # Pre-load all attributes to avoid DetachedInstanceError
             implements_data = []
+            active_impl_count = 0
+            total_impl_value = 0
+
             for impl in implements_list:
+                # Eagerly access all attributes while in session
+                impl_id = impl.id
+                impl_type = impl.implement_type
+                impl_brand = impl.brand
+                impl_model = impl.model
+                impl_year = impl.year
+                impl_width = impl.working_width_m
+                impl_status = impl.status
+                impl_value = impl.current_value
+
+                # Count for statistics
+                if impl_status == 'active':
+                    active_impl_count += 1
+                if impl_value:
+                    total_impl_value += impl_value
+
                 implements_data.append({
-                    'ID': impl.id,
+                    'ID': impl_id,
                     'Тип': {
                         'seeder': 'Сеялка',
                         'planter': 'Сажалка',
@@ -268,33 +319,31 @@ try:
                         'stubble_breaker': 'Стерневая борона',
                         'snow_plow': 'Снегозадержатель',
                         'other': 'Другое'
-                    }.get(impl.implement_type, impl.implement_type),
-                    'Марка': impl.brand or '-',
-                    'Модель': impl.model,
-                    'Год': impl.year or '-',
-                    'Ширина захвата (м)': impl.working_width_m or '-',
+                    }.get(impl_type, impl_type),
+                    'Марка': impl_brand or '-',
+                    'Модель': impl_model,
+                    'Год': str(impl_year) if impl_year else '-',
+                    'Ширина захвата (м)': str(impl_width) if impl_width else '-',
                     'Статус': {
                         'active': '✅ Активен',
                         'maintenance': '🔧 Ремонт',
                         'inactive': '❌ Неактивен',
                         'sold': '💰 Продан'
-                    }.get(impl.status, impl.status),
-                    'Стоимость': f"{impl.current_value:,.0f} тг" if impl.current_value else '-'
+                    }.get(impl_status, impl_status),
+                    'Стоимость': f"{impl_value:,.0f} тг" if impl_value else '-'
                 })
 
             df_implements = pd.DataFrame(implements_data)
-            st.dataframe(df_implements, use_container_width=True, hide_index=True)
+            st.dataframe(df_implements, width='stretch', hide_index=True)
 
             # Статистика
             col1, col2, col3 = st.columns(3)
             with col1:
                 st.metric("Всего единиц", len(implements_list))
             with col2:
-                active_count = len([i for i in implements_list if i.status == 'active'])
-                st.metric("Активных", active_count)
+                st.metric("Активных", active_impl_count)
             with col3:
-                total_value = sum([i.current_value for i in implements_list if i.current_value])
-                st.metric("Общая стоимость", f"{total_value:,.0f} тг")
+                st.metric("Общая стоимость", f"{total_impl_value:,.0f} тг")
         else:
             st.info("Агрегаты не добавлены. Добавьте первый агрегат ниже.")
 
@@ -397,18 +446,29 @@ try:
         if implements_list and can_delete_data():
             st.markdown("### 🗑️ Удалить агрегат")
 
-            implement_to_delete = st.selectbox(
+            # Pre-load attributes for delete selectbox
+            implement_delete_options = {}
+            for i in implements_list:
+                display = f"{i.brand or ''} {i.model} ({i.year or '-'}) - {i.working_width_m or '-'}м"
+                implement_delete_options[display] = i.id
+
+            selected_implement_to_delete = st.selectbox(
                 "Выберите агрегат для удаления",
-                options=implements_list,
-                format_func=lambda i: f"{i.brand or ''} {i.model} ({i.year or '-'}) - {i.working_width_m or '-'}м"
+                options=list(implement_delete_options.keys()),
+                key="delete_implement_select"
             )
 
             if st.button("🗑️ Удалить выбранный агрегат", type="secondary"):
                 try:
-                    db.delete(implement_to_delete)
-                    db.commit()
-                    st.success("✅ Агрегат удалён")
-                    st.rerun()
+                    implement_id_to_delete = implement_delete_options[selected_implement_to_delete]
+                    implement_obj = db.query(Implements).filter(Implements.id == implement_id_to_delete).first()
+                    if implement_obj:
+                        db.delete(implement_obj)
+                        db.commit()
+                        st.success("✅ Агрегат удалён")
+                        st.rerun()
+                    else:
+                        st.error("❌ Агрегат не найден")
                 except Exception as e:
                     db.rollback()
                     st.error(f"❌ Ошибка при удалении: {e}")
