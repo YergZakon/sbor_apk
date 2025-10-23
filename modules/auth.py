@@ -6,7 +6,7 @@ import streamlit as st
 from datetime import datetime
 from typing import Optional
 from sqlalchemy.orm import Session
-from modules.database import User, Farm, AuditLog
+from modules.database import User, Farm, AuditLog, UserFarm, SessionLocal
 
 
 def hash_password(password: str) -> str:

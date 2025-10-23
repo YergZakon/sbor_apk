@@ -3,7 +3,7 @@ Database models and connection management
 Updated: 2025-10-22 - Added Machinery, Implements and new operation details models
 """
 from datetime import datetime
-from sqlalchemy import create_engine, Column, Integer, String, Float, Date, DateTime, Boolean, Text, ForeignKey, func
+from sqlalchemy import create_engine, Column, Integer, String, Float, Date, DateTime, Boolean, Text, ForeignKey, func, UniqueConstraint
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 import os
 from dotenv import load_dotenv
@@ -38,7 +38,29 @@ class User(Base):
     last_login = Column(DateTime)
 
     # Relationships
-    farm = relationship("Farm", back_populates="users", foreign_keys=[farm_id])
+    farm = relationship("Farm", back_populates="users", foreign_keys=[farm_id])  # Legacy: single farm
+    user_farms = relationship("UserFarm", back_populates="user")  # New: multiple farms
+
+
+class UserFarm(Base):
+    """Связь пользователя с хозяйствами (many-to-many)"""
+    __tablename__ = "user_farms"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    farm_id = Column(Integer, ForeignKey("farms.id"), nullable=False)
+    role = Column(String(20), default="viewer")  # admin, manager, viewer - роль в этом хозяйстве
+    is_primary = Column(Boolean, default=False)  # Основное хозяйство пользователя
+    created_at = Column(DateTime, server_default=func.now())
+
+    # Relationships
+    user = relationship("User", back_populates="user_farms")
+    farm = relationship("Farm", back_populates="user_farms")
+
+    # Unique constraint: один пользователь не может быть добавлен в одно хозяйство дважды
+    __table_args__ = (
+        UniqueConstraint('user_id', 'farm_id', name='uq_user_farm'),
+    )
 
 
 class AuditLog(Base):
@@ -87,7 +109,8 @@ class Farm(Base):
 
     # Relationships
     fields = relationship("Field", back_populates="farm")
-    users = relationship("User", back_populates="farm", foreign_keys="[User.farm_id]")
+    users = relationship("User", back_populates="farm", foreign_keys="[User.farm_id]")  # Legacy: single farm
+    user_farms = relationship("UserFarm", back_populates="farm")  # New: multiple users with roles
 
 
 class Field(Base):

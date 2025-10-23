@@ -162,6 +162,7 @@ ORDER BY ordinal_position;
 | 002 | 2025-10-23 | Add implement types (header, mower, baler) | Pending |
 | 003 | 2025-10-23 | Add desiccation application_method field | Pending |
 | 004 | 2025-10-23 | Add missing operation detail fields (5 fields) | Pending |
+| 005 | 2025-10-23 | Add user_farms table (many-to-many) | Pending |
 
 ## Rollback Instructions
 
