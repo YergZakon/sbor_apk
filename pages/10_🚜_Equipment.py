@@ -37,6 +37,7 @@ db = SessionLocal()
 # Загрузка справочников техники
 tractors_ref = {}
 combines_ref = {}
+implements_ref = {}
 
 try:
     tractors_path = Path('data/tractors.json')
@@ -53,6 +54,14 @@ try:
             combines_ref = json.load(f)
 except Exception as e:
     st.warning(f"⚠️ Не удалось загрузить справочник комбайнов: {e}")
+
+try:
+    implements_path = Path('data/implements.json')
+    if implements_path.exists():
+        with open(implements_path, 'r', encoding='utf-8') as f:
+            implements_ref = json.load(f)
+except Exception as e:
+    st.warning(f"⚠️ Не удалось загрузить справочник агрегатов: {e}")
 
 try:
     # Проверка наличия хозяйства
@@ -425,6 +434,9 @@ try:
                         'fertilizer_spreader': 'Разбрасыватель удобрений',
                         'stubble_breaker': 'Стерневая борона',
                         'snow_plow': 'Снегозадержатель',
+                        'header': 'Жатка',
+                        'mower': 'Косилка',
+                        'baler': 'Пресс-подборщик',
                         'other': 'Другое'
                     }.get(impl_type, impl_type),
                     'Марка': impl_brand or '-',
@@ -462,36 +474,120 @@ try:
 
         st.markdown("### ➕ Добавить агрегат")
 
+        # Режим добавления
+        add_impl_mode = st.radio(
+            "Режим добавления",
+            options=["Из справочника", "Вручную"],
+            horizontal=True,
+            help="Выберите модель из справочника для автозаполнения или введите данные вручную",
+            key="impl_add_mode"
+        )
+
+        # Выбор типа агрегата (вне формы для динамического обновления)
+        implement_type = st.selectbox(
+            "Тип агрегата *",
+            options=['seeder', 'planter', 'plow', 'cultivator', 'harrow', 'disc',
+                    'deep_loosener', 'roller', 'sprayer_trailer', 'fertilizer_spreader',
+                    'stubble_breaker', 'snow_plow', 'header', 'mower', 'baler', 'other'],
+            format_func=lambda x: {
+                'seeder': 'Сеялка',
+                'planter': 'Сажалка',
+                'plow': 'Плуг',
+                'cultivator': 'Культиватор',
+                'harrow': 'Борона',
+                'disc': 'Дисковая борона',
+                'deep_loosener': 'Глубокорыхлитель',
+                'roller': 'Каток',
+                'sprayer_trailer': 'Прицепной опрыскиватель',
+                'fertilizer_spreader': 'Разбрасыватель удобрений',
+                'stubble_breaker': 'Стерневая борона',
+                'snow_plow': 'Снегозадержатель',
+                'header': 'Жатка',
+                'mower': 'Косилка',
+                'baler': 'Пресс-подборщик',
+                'other': 'Другое'
+            }[x],
+            key="implement_type_select"
+        )
+
+        # Автозаполнение из справочника (вне формы для динамического обновления)
+        selected_impl_ref_model = None
+        impl_ref_data = None
+
+        if add_impl_mode == "Из справочника" and implements_ref:
+            # Фильтрация по типу оборудования
+            filtered_by_type = {k: v for k, v in implements_ref.items() if v.get('тип_оборудования') == implement_type}
+
+            if filtered_by_type:
+                st.markdown("**📚 Выбор из справочника агрегатов**")
+
+                col_ref1, col_ref2 = st.columns(2)
+
+                with col_ref1:
+                    # Выбор производителя
+                    brands = sorted(set(v['производитель'] for v in filtered_by_type.values()))
+                    selected_impl_brand = st.selectbox("Производитель", brands, key="impl_brand_ref")
+
+                with col_ref2:
+                    # Фильтрация моделей по производителю
+                    filtered_models = {k: v for k, v in filtered_by_type.items() if v['производитель'] == selected_impl_brand}
+
+                    if filtered_models:
+                        selected_impl_ref_model = st.selectbox("Модель из справочника", list(filtered_models.keys()), key="impl_model_ref")
+                        impl_ref_data = filtered_models[selected_impl_ref_model]
+
+                # Показать характеристики
+                if impl_ref_data:
+                    # Формируем строку характеристик в зависимости от типа
+                    specs = []
+                    if 'ширина_захвата_м' in impl_ref_data and impl_ref_data['ширина_захвата_м']:
+                        specs.append(f"📏 Ширина: {impl_ref_data['ширина_захвата_м']} м")
+                    if 'категория' in impl_ref_data:
+                        specs.append(f"🏷️ {impl_ref_data['категория']}")
+                    if 'тип' in impl_ref_data:
+                        specs.append(f"⚙️ {impl_ref_data['тип']}")
+                    if 'применение' in impl_ref_data:
+                        specs.append(f"🌾 {impl_ref_data['применение']}")
+
+                    if specs:
+                        st.success(" | ".join(specs))
+            else:
+                st.info("💡 Справочник недоступен для этого типа агрегата. Используйте ручной ввод ниже.")
+        elif add_impl_mode == "Из справочника":
+            st.info("💡 Справочник агрегатов не загружен. Используйте ручной ввод ниже.")
+
+        st.markdown("---")
+
+        # ФОРМА (данные предзаполнены из выбора выше)
         with st.form("add_implement_form", clear_on_submit=True):
             col1, col2 = st.columns(2)
 
             with col1:
-                implement_type = st.selectbox(
-                    "Тип агрегата *",
-                    options=['seeder', 'planter', 'plow', 'cultivator', 'harrow', 'disc',
-                            'deep_loosener', 'roller', 'sprayer_trailer', 'fertilizer_spreader',
-                            'stubble_breaker', 'snow_plow', 'other'],
-                    format_func=lambda x: {
-                        'seeder': 'Сеялка',
-                        'planter': 'Сажалка',
-                        'plow': 'Плуг',
-                        'cultivator': 'Культиватор',
-                        'harrow': 'Борона',
-                        'disc': 'Дисковая борона',
-                        'deep_loosener': 'Глубокорыхлитель',
-                        'roller': 'Каток',
-                        'sprayer_trailer': 'Прицепной опрыскиватель',
-                        'fertilizer_spreader': 'Разбрасыватель удобрений',
-                        'stubble_breaker': 'Стерневая борона',
-                        'snow_plow': 'Снегозадержатель',
-                        'other': 'Другое'
-                    }[x]
-                )
+                # Поля для ручного ввода или переопределения
+                if impl_ref_data:
+                    impl_brand = st.text_input("Марка", value=impl_ref_data['производитель'], disabled=True)
+                    impl_model = st.text_input("Модель *", value=impl_ref_data['модель'], disabled=True)
 
-                impl_brand = st.text_input("Марка", placeholder="Например: Amazone, Horsch, БДТ")
-                impl_model = st.text_input("Модель *", placeholder="Например: Cirrus 6003, Pronto 9 DC")
+                    # Попытка извлечь ширину захвата
+                    width_str = str(impl_ref_data.get('ширина_захвата_м', ''))
+                    try:
+                        # Если диапазон, берем первое значение
+                        if '-' in width_str:
+                            working_width_default = float(width_str.split('-')[0])
+                        elif 'рядов' in width_str or 'ряд' in width_str:
+                            # Для кукурузных жаток и т.д. - просто None
+                            working_width_default = None
+                        else:
+                            working_width_default = float(width_str)
+                    except:
+                        working_width_default = None
+                else:
+                    impl_brand = st.text_input("Марка", placeholder="Например: Amazone, Horsch, БДТ")
+                    impl_model = st.text_input("Модель *", placeholder="Например: Cirrus 6003, Pronto 9 DC")
+                    working_width_default = None
+
                 impl_year = st.number_input("Год выпуска", min_value=1950, max_value=datetime.now().year, value=None, step=1, key="impl_year")
-                working_width_m = st.number_input("Ширина захвата (м)", min_value=0.0, value=None, step=0.5)
+                working_width_m = st.number_input("Ширина захвата (м)", min_value=0.0, value=working_width_default, step=0.5)
 
             with col2:
                 impl_purchase_date = st.date_input("Дата покупки", value=None, key="impl_purchase_date")
