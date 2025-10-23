@@ -6,6 +6,7 @@ import streamlit as st
 import pandas as pd
 import json
 from datetime import datetime, date
+from pathlib import Path
 from sqlalchemy.orm import Session
 from modules.database import SessionLocal, Farm, Field, Operation, SowingDetail, Machinery, Implements
 from modules.auth import (
@@ -38,6 +39,16 @@ db = SessionLocal()
 # Загрузка справочника культур
 with open('data/crops.json', 'r', encoding='utf-8') as f:
     crops_reference = json.load(f)
+
+# Загрузка справочников техники
+tractors_ref = {}
+try:
+    tractors_path = Path('data/tractors.json')
+    if tractors_path.exists():
+        with open(tractors_path, 'r', encoding='utf-8') as f:
+            tractors_ref = json.load(f)
+except Exception as e:
+    pass  # Справочник опционален
 
 try:
     # Проверка наличия хозяйства
@@ -288,11 +299,23 @@ try:
         with col1:
             # Create machinery options with pre-loaded attributes
             machinery_options = {}
+            machinery_details = {}  # Для хранения деталей техники
+
             if machinery_list:
                 for m in machinery_list:
                     # Eagerly access attributes while still in session
-                    display_text = f"{m.brand or ''} {m.model} ({m.year or '-'})"
-                    machinery_options[display_text] = (m.id, m.year)
+                    m_brand = m.brand or ''
+                    m_model = m.model
+                    m_year = m.year
+                    m_power = m.engine_power_hp
+
+                    display_text = f"{m_brand} {m_model} ({m_year or '-'})"
+                    machinery_options[display_text] = (m.id, m_year)
+
+                    # Ищем технику в справочнике для показа характеристик
+                    ref_key = f"{m_brand} {m_model}"
+                    if ref_key in tractors_ref:
+                        machinery_details[display_text] = tractors_ref[ref_key]
 
             selected_machinery_display = st.selectbox(
                 "Техника (трактор)",
@@ -302,7 +325,19 @@ try:
 
             if selected_machinery_display != "Не выбрано":
                 selected_machinery_id, machine_year = machinery_options[selected_machinery_display]
-                st.caption(f"Год выпуска: {machine_year or 'не указан'}")
+
+                # Показываем характеристики из справочника
+                if selected_machinery_display in machinery_details:
+                    ref_data = machinery_details[selected_machinery_display]
+                    st.success(f"💪 {ref_data['мощность_лс']} л.с. | 🏷️ {ref_data['класс']} | 🚜 {ref_data['тип']}")
+
+                    # Проверка пригодности для посева
+                    if 'Посев' in ref_data.get('применение', []):
+                        st.info("✅ Подходит для посевных работ")
+                    else:
+                        st.warning("⚠️ Не оптимальна для посева (см. применение в справочнике)")
+                else:
+                    st.caption(f"Год выпуска: {machine_year or 'не указан'}")
             else:
                 selected_machinery_id = None
                 machine_year = None

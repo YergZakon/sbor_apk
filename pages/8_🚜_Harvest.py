@@ -54,6 +54,16 @@ def load_crops_reference():
 
 crops_ref = load_crops_reference()
 
+# Загрузка справочника комбайнов
+combines_ref = {}
+try:
+    combines_path = Path(__file__).parent.parent / "data" / "combines.json"
+    if combines_path.exists():
+        with open(combines_path, 'r', encoding='utf-8') as f:
+            combines_ref = json.load(f)
+except Exception as e:
+    pass  # Справочник опционален
+
 # Подключение к БД
 db = next(get_db())
 
@@ -214,11 +224,22 @@ with tab1:
 
         # Pre-load machinery attributes
         machinery_options = {}
+        machinery_details = {}  # Для хранения деталей комбайнов
+
         if combines:
             for m in combines:
                 # Eagerly access attributes while still in session
-                display_text = f"{m.brand or ''} {m.model} ({m.year or '-'})"
-                machinery_options[display_text] = (m.id, m.year)
+                m_brand = m.brand or ''
+                m_model = m.model
+                m_year = m.year
+
+                display_text = f"{m_brand} {m_model} ({m_year or '-'})"
+                machinery_options[display_text] = (m.id, m_year)
+
+                # Ищем комбайн в справочнике для показа характеристик
+                ref_key = f"{m_brand} {m_model}"
+                if ref_key in combines_ref:
+                    machinery_details[display_text] = combines_ref[ref_key]
 
         col_tech1, col_tech2 = st.columns(2)
 
@@ -232,6 +253,18 @@ with tab1:
 
             if selected_machinery_display != "Не выбрано":
                 selected_machinery_id, machine_year = machinery_options[selected_machinery_display]
+
+                # Показываем характеристики из справочника
+                if selected_machinery_display in machinery_details:
+                    ref_data = machinery_details[selected_machinery_display]
+                    st.success(f"💪 {ref_data['мощность_лс']} л.с. | 🏷️ {ref_data['класс']} | ⚙️ {ref_data['молотильный_аппарат']}")
+
+                    # Показываем подходящие культуры
+                    if ref_data.get('культуры'):
+                        cultures = ', '.join(ref_data['культуры'])
+                        st.info(f"🌾 Подходит для: {cultures}")
+                else:
+                    st.caption(f"Год выпуска: {machine_year or 'не указан'}")
             else:
                 selected_machinery_id = None
                 machine_year = None
