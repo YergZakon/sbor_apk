@@ -4,7 +4,7 @@ Admin Panel - User Management
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from modules.database import SessionLocal, User, Farm, AuditLog
+from modules.database import SessionLocal, User, Farm, AuditLog, UserFarm
 from modules.auth import (
     require_admin, get_current_user, create_user, hash_password,
     get_user_display_name, log_action
@@ -44,7 +44,7 @@ try:
     st.markdown("---")
 
     # Вкладки админки
-    tabs = st.tabs(["👥 Пользователи", "➕ Создать пользователя", "📜 Журнал действий", "⚙️ Настройки"])
+    tabs = st.tabs(["👥 Пользователи", "➕ Создать пользователя", "🏢 Назначение на хозяйства", "📜 Журнал действий", "⚙️ Настройки"])
 
     # ============================================================================
     # ВКЛАДКА: УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ
@@ -295,9 +295,171 @@ try:
                         st.error(f"❌ Ошибка: {str(e)}")
 
     # ============================================================================
-    # ВКЛАДКА: ЖУРНАЛ ДЕЙСТВИЙ
+    # ВКЛАДКА: НАЗНАЧЕНИЕ НА ХОЗЯЙСТВА (MULTI-FARM)
     # ============================================================================
     with tabs[2]:
+        st.markdown("### 🏢 Управление доступом к хозяйствам")
+        st.info("💡 **Multi-Farm**: Назначьте пользователю доступ к нескольким хозяйствам с разными ролями")
+
+        # Выбор пользователя
+        all_users = db.query(User).filter(User.role != 'admin').all()  # Админам не нужно назначение
+
+        if not all_users:
+            st.warning("👤 Нет пользователей для назначения (только админы)")
+        else:
+            selected_user_for_farms = st.selectbox(
+                "Выберите пользователя",
+                options=[u.username for u in all_users],
+                key="user_farms_select"
+            )
+
+            if selected_user_for_farms:
+                user_obj = next((u for u in all_users if u.username == selected_user_for_farms), None)
+
+                if user_obj:
+                    st.markdown(f"#### Пользователь: **{user_obj.full_name or user_obj.username}** ({user_obj.email})")
+
+                    # Показать текущие назначения
+                    current_assignments = db.query(
+                        UserFarm, Farm
+                    ).join(
+                        Farm, UserFarm.farm_id == Farm.id
+                    ).filter(
+                        UserFarm.user_id == user_obj.id
+                    ).all()
+
+                    st.markdown("##### 📋 Текущие назначения:")
+
+                    if current_assignments:
+                        for uf, farm in current_assignments:
+                            col1, col2, col3, col4 = st.columns([3, 2, 1, 1])
+
+                            with col1:
+                                primary_star = "⭐ " if uf.is_primary else ""
+                                st.write(f"{primary_star}**{farm.name}** ({farm.bin})")
+
+                            with col2:
+                                role_display = {
+                                    "admin": "👑 Администратор",
+                                    "manager": "👔 Менеджер",
+                                    "viewer": "👁️ Наблюдатель"
+                                }.get(uf.role, uf.role)
+                                st.write(role_display)
+
+                            with col3:
+                                if uf.is_primary:
+                                    st.success("Основное")
+                                else:
+                                    if st.button("Сделать основным", key=f"primary_{uf.id}"):
+                                        # Убрать is_primary у всех других
+                                        db.query(UserFarm).filter(
+                                            UserFarm.user_id == user_obj.id
+                                        ).update({"is_primary": False})
+
+                                        # Установить для текущего
+                                        uf.is_primary = True
+                                        db.commit()
+
+                                        st.success("✅ Установлено как основное")
+                                        st.rerun()
+
+                            with col4:
+                                if st.button("🗑️", key=f"delete_uf_{uf.id}"):
+                                    db.delete(uf)
+                                    db.commit()
+                                    st.success("✅ Удалено")
+                                    st.rerun()
+
+                        st.markdown("---")
+                    else:
+                        st.warning("⚠️ Пользователь не назначен ни на одно хозяйство")
+                        st.info("💡 Используйте форму ниже для добавления")
+
+                    # Форма добавления нового назначения
+                    st.markdown("##### ➕ Добавить доступ к хозяйству")
+
+                    with st.form("add_user_farm_form"):
+                        col1, col2, col3 = st.columns(3)
+
+                        with col1:
+                            all_farms = db.query(Farm).all()
+
+                            # Исключить уже назначенные хозяйства
+                            assigned_farm_ids = [uf.farm_id for uf, _ in current_assignments]
+                            available_farms = [f for f in all_farms if f.id not in assigned_farm_ids]
+
+                            if not available_farms:
+                                st.warning("Все хозяйства уже назначены")
+                                farm_to_add = None
+                            else:
+                                farm_options = [f"{f.id} - {f.name} ({f.bin})" for f in available_farms]
+                                selected_farm_option = st.selectbox("Хозяйство", farm_options)
+
+                                if selected_farm_option:
+                                    farm_id_to_add = int(selected_farm_option.split(" - ")[0])
+                                    farm_to_add = next((f for f in available_farms if f.id == farm_id_to_add), None)
+                                else:
+                                    farm_to_add = None
+
+                        with col2:
+                            role_to_add = st.selectbox(
+                                "Роль в хозяйстве",
+                                options=["viewer", "manager", "admin"],
+                                format_func=lambda x: {
+                                    "admin": "👑 Администратор (полный доступ)",
+                                    "manager": "👔 Менеджер (редактирование)",
+                                    "viewer": "👁️ Наблюдатель (только просмотр)"
+                                }[x]
+                            )
+
+                        with col3:
+                            set_as_primary = st.checkbox(
+                                "Сделать основным",
+                                value=len(current_assignments) == 0,  # Первое назначение всегда основное
+                                help="Основное хозяйство показывается по умолчанию"
+                            )
+
+                        add_farm_submitted = st.form_submit_button(
+                            "➕ Добавить доступ",
+                            type="primary",
+                            use_container_width=True
+                        )
+
+                        if add_farm_submitted and farm_to_add:
+                            try:
+                                # Если устанавливаем как основное - убираем is_primary у других
+                                if set_as_primary:
+                                    db.query(UserFarm).filter(
+                                        UserFarm.user_id == user_obj.id
+                                    ).update({"is_primary": False})
+
+                                # Создаем новое назначение
+                                new_uf = UserFarm(
+                                    user_id=user_obj.id,
+                                    farm_id=farm_to_add.id,
+                                    role=role_to_add,
+                                    is_primary=set_as_primary
+                                )
+
+                                db.add(new_uf)
+                                db.commit()
+
+                                log_action(
+                                    db, current_user['id'], "create", "user_farm", new_uf.id,
+                                    f"Assigned {user_obj.username} to {farm_to_add.name} as {role_to_add}"
+                                )
+
+                                st.success(f"✅ Пользователь {user_obj.username} добавлен в {farm_to_add.name}")
+                                st.rerun()
+
+                            except Exception as e:
+                                db.rollback()
+                                st.error(f"❌ Ошибка: {str(e)}")
+
+    # ============================================================================
+    # ВКЛАДКА: ЖУРНАЛ ДЕЙСТВИЙ
+    # ============================================================================
+    with tabs[3]:
         st.markdown("### 📜 Журнал действий пользователей")
 
         logs = db.query(AuditLog, User).join(User).order_by(AuditLog.created_at.desc()).limit(100).all()
@@ -331,7 +493,7 @@ try:
     # ============================================================================
     # ВКЛАДКА: НАСТРОЙКИ
     # ============================================================================
-    with tabs[3]:
+    with tabs[4]:
         st.markdown("### ⚙️ Системные настройки")
 
         st.info("🚧 Раздел в разработке")
