@@ -4,6 +4,8 @@ Equipment - Управление техникой и агрегатами
 """
 import streamlit as st
 import pandas as pd
+import json
+from pathlib import Path
 from sqlalchemy.orm import Session
 from modules.database import SessionLocal, Farm, Machinery, Implements
 from modules.auth import (
@@ -31,6 +33,26 @@ st.caption(f"Пользователь: **{get_user_display_name()}**")
 
 # Получение сессии БД
 db = SessionLocal()
+
+# Загрузка справочников техники
+tractors_ref = {}
+combines_ref = {}
+
+try:
+    tractors_path = Path('data/tractors.json')
+    if tractors_path.exists():
+        with open(tractors_path, 'r', encoding='utf-8') as f:
+            tractors_ref = json.load(f)
+except Exception as e:
+    st.warning(f"⚠️ Не удалось загрузить справочник тракторов: {e}")
+
+try:
+    combines_path = Path('data/combines.json')
+    if combines_path.exists():
+        with open(combines_path, 'r', encoding='utf-8') as f:
+            combines_ref = json.load(f)
+except Exception as e:
+    st.warning(f"⚠️ Не удалось загрузить справочник комбайнов: {e}")
 
 try:
     # Проверка наличия хозяйства
@@ -144,6 +166,14 @@ try:
 
         st.markdown("### ➕ Добавить технику")
 
+        # Режим добавления
+        add_mode = st.radio(
+            "Режим добавления",
+            options=["Из справочника", "Вручную"],
+            horizontal=True,
+            help="Выберите модель из справочника для автозаполнения или введите данные вручную"
+        )
+
         with st.form("add_machinery_form", clear_on_submit=True):
             col1, col2 = st.columns(2)
 
@@ -161,13 +191,75 @@ try:
                     }[x]
                 )
 
-                brand = st.text_input("Марка", placeholder="Например: John Deere, Case IH, МТЗ")
-                model = st.text_input("Модель *", placeholder="Например: 8R 370, Axial-Flow 9250")
+                # Автозаполнение из справочника
+                selected_ref_model = None
+                ref_data = None
+
+                if add_mode == "Из справочника":
+                    if machinery_type == 'tractor' and tractors_ref:
+                        st.markdown("**📚 Выбор из справочника тракторов**")
+
+                        # Выбор производителя
+                        brands = sorted(set(v['производитель'] for v in tractors_ref.values()))
+                        selected_brand = st.selectbox("Производитель", brands, key="tractor_brand")
+
+                        # Фильтрация моделей по производителю
+                        filtered_models = {k: v for k, v in tractors_ref.items() if v['производитель'] == selected_brand}
+
+                        if filtered_models:
+                            selected_ref_model = st.selectbox("Модель из справочника", list(filtered_models.keys()), key="tractor_model")
+                            ref_data = filtered_models[selected_ref_model]
+
+                            # Показать характеристики
+                            st.info(f"💪 Мощность: {ref_data['мощность_лс']} л.с. | "
+                                   f"🏷️ Класс: {ref_data['класс']} | "
+                                   f"🚜 Тип: {ref_data['тип']}")
+
+                    elif machinery_type == 'combine' and combines_ref:
+                        st.markdown("**📚 Выбор из справочника комбайнов**")
+
+                        # Выбор производителя
+                        brands = sorted(set(v['производитель'] for v in combines_ref.values()))
+                        selected_brand = st.selectbox("Производитель", brands, key="combine_brand")
+
+                        # Фильтрация моделей по производителю
+                        filtered_models = {k: v for k, v in combines_ref.items() if v['производитель'] == selected_brand}
+
+                        if filtered_models:
+                            selected_ref_model = st.selectbox("Модель из справочника", list(filtered_models.keys()), key="combine_model")
+                            ref_data = filtered_models[selected_ref_model]
+
+                            # Показать характеристики
+                            st.info(f"💪 Мощность: {ref_data['мощность_лс']} л.с. | "
+                                   f"🏷️ Класс: {ref_data['класс']} | "
+                                   f"⚙️ Молотилка: {ref_data['молотильный_аппарат']}")
+                    else:
+                        st.warning("Справочник недоступен для этого типа техники. Используйте ручной ввод.")
+
+                # Поля для ручного ввода или переопределения
+                if ref_data:
+                    brand = st.text_input("Марка", value=ref_data['производитель'], disabled=True)
+                    model = st.text_input("Модель *", value=ref_data['модель'], disabled=True)
+                    engine_power_hp_default = float(ref_data['мощность_лс'])
+                else:
+                    brand = st.text_input("Марка", placeholder="Например: John Deere, Case IH, МТЗ")
+                    model = st.text_input("Модель *", placeholder="Например: 8R 370, Axial-Flow 9250")
+                    engine_power_hp_default = None
+
                 year = st.number_input("Год выпуска", min_value=1950, max_value=datetime.now().year, value=None, step=1)
                 registration_number = st.text_input("Регистрационный номер", placeholder="Например: А123ВС 01")
 
             with col2:
-                engine_power_hp = st.number_input("Мощность двигателя (л.с.)", min_value=0.0, value=None, step=10.0)
+                engine_power_hp = st.number_input(
+                    "Мощность двигателя (л.с.)",
+                    min_value=0.0,
+                    value=engine_power_hp_default,
+                    step=10.0
+                )
+
+                # Автозаполнение топлива
+                fuel_default_index = 0 if ref_data and ref_data.get('топливо') == 'Дизель' else None
+
                 fuel_type = st.selectbox(
                     "Тип топлива",
                     options=['diesel', 'gasoline', 'electric', 'hybrid', 'gas', 'other'],
@@ -179,7 +271,7 @@ try:
                         'gas': 'Газ',
                         'other': 'Другое'
                     }.get(x, x),
-                    index=None
+                    index=fuel_default_index
                 )
 
                 purchase_date = st.date_input("Дата покупки", value=None)
