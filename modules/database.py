@@ -369,12 +369,12 @@ class Machinery(Base):
 
 
 class Implements(Base):
-    """Агрегаты (сеялки, бороны, культиваторы, прицепные опрыскиватели)"""
+    """Агрегаты (сеялки, бороны, культиваторы, прицепные опрыскиватели, жатки, косилки, пресс-подборщики)"""
     __tablename__ = "implements"
 
     id = Column(Integer, primary_key=True, index=True)
     farm_id = Column(Integer, ForeignKey("farms.id"), nullable=False)
-    implement_type = Column(String(50), nullable=False)  # seeder, planter, plow, cultivator, harrow, disc, deep_loosener, roller, sprayer_trailer, fertilizer_spreader, stubble_breaker, snow_plow, other
+    implement_type = Column(String(50), nullable=False)  # seeder, planter, plow, cultivator, harrow, disc, deep_loosener, roller, sprayer_trailer, fertilizer_spreader, stubble_breaker, snow_plow, header, mower, baler, other
     brand = Column(String(100))
     model = Column(String(100), nullable=False)
     year = Column(Integer)
