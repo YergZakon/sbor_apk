@@ -286,34 +286,48 @@ try:
         col1, col2 = st.columns(2)
 
         with col1:
-            selected_machinery = st.selectbox(
+            # Create machinery options with pre-loaded attributes
+            machinery_options = {}
+            if machinery_list:
+                for m in machinery_list:
+                    # Eagerly access attributes while still in session
+                    display_text = f"{m.brand or ''} {m.model} ({m.year or '-'})"
+                    machinery_options[display_text] = (m.id, m.year)
+
+            selected_machinery_display = st.selectbox(
                 "Техника (трактор)",
-                options=[None] + machinery_list,
-                format_func=lambda m: "Не выбрано" if m is None else f"{m.brand or ''} {m.model} ({m.year or '-'})",
+                options=["Не выбрано"] + list(machinery_options.keys()),
                 help="Выберите трактор или другую технику"
             )
 
-            if selected_machinery:
-                machine_year = selected_machinery.year
+            if selected_machinery_display != "Не выбрано":
+                selected_machinery_id, machine_year = machinery_options[selected_machinery_display]
                 st.caption(f"Год выпуска: {machine_year or 'не указан'}")
             else:
+                selected_machinery_id = None
                 machine_year = None
 
         with col2:
-            # Фильтруем только сеялки
-            seeders = [impl for impl in implements_list if impl.implement_type in ['seeder', 'planter']]
+            # Фильтруем только сеялки и pre-load attributes
+            implement_options = {}
+            if implements_list:
+                for impl in implements_list:
+                    if impl.implement_type in ['seeder', 'planter']:
+                        # Eagerly access attributes while still in session
+                        display_text = f"{impl.brand or ''} {impl.model} ({impl.working_width_m or '-'}м)"
+                        implement_options[display_text] = (impl.id, impl.year, impl.working_width_m)
 
-            selected_implement = st.selectbox(
+            selected_implement_display = st.selectbox(
                 "Агрегат (сеялка)",
-                options=[None] + seeders,
-                format_func=lambda i: "Не выбрано" if i is None else f"{i.brand or ''} {i.model} ({i.working_width_m or '-'}м)",
+                options=["Не выбрано"] + list(implement_options.keys()),
                 help="Выберите сеялку или сажалку"
             )
 
-            if selected_implement:
-                implement_year = selected_implement.year
-                st.caption(f"Год выпуска: {implement_year or 'не указан'}, Ширина: {selected_implement.working_width_m or '-'}м")
+            if selected_implement_display != "Не выбрано":
+                selected_implement_id, implement_year, implement_width = implement_options[selected_implement_display]
+                st.caption(f"Год выпуска: {implement_year or 'не указан'}, Ширина: {implement_width or '-'}м")
             else:
+                selected_implement_id = None
                 implement_year = None
 
         if not machinery_list and not implements_list:
@@ -444,8 +458,8 @@ try:
                         crop=selected_crop,
                         variety=selected_variety if selected_variety != "Не указан" else None,
                         area_processed_ha=area_processed,
-                        machine_id=selected_machinery.id if selected_machinery else None,
-                        implement_id=selected_implement.id if selected_implement else None,
+                        machine_id=selected_machinery_id if selected_machinery_id else None,
+                        implement_id=selected_implement_id if selected_implement_id else None,
                         machine_year=machine_year,
                         implement_year=implement_year,
                         work_speed_kmh=work_speed_kmh if work_speed_kmh else None,
