@@ -70,17 +70,43 @@ with tab1:
         machinery_list = filter_query_by_farm(db.query(Machinery).filter(Machinery.status == 'active'), Machinery).all()
         implements_list = filter_query_by_farm(db.query(Implements).filter(Implements.status == 'active'), Implements).all()
 
+        # Pre-load machinery attributes
+        tractors = [m for m in machinery_list if m.machinery_type == 'tractor']
+        machinery_options = {}
+        if tractors:
+            for m in tractors:
+                # Eagerly access attributes while still in session
+                display_text = f"{m.brand or ''} {m.model}"
+                machinery_options[display_text] = (m.id, m.year)
+
+        # Pre-load implement attributes
+        snow_plows = [impl for impl in implements_list if impl.implement_type == 'snow_plow']
+        implement_options = {}
+        if snow_plows:
+            for i in snow_plows:
+                # Eagerly access attributes while still in session
+                display_text = f"{i.brand or ''} {i.model}"
+                implement_options[display_text] = (i.id, i.year)
+
         col_tech1, col_tech2, col_tech3 = st.columns(3)
 
         with col_tech1:
-            tractors = [m for m in machinery_list if m.machinery_type == 'tractor']
-            selected_machinery = st.selectbox("Трактор", [None] + tractors, format_func=lambda m: "Не выбрано" if m is None else f"{m.brand or ''} {m.model}")
-            machine_year = selected_machinery.year if selected_machinery else None
+            selected_machinery_display = st.selectbox("Трактор", ["Не выбрано"] + list(machinery_options.keys()))
+
+            if selected_machinery_display != "Не выбрано":
+                selected_machinery_id, machine_year = machinery_options[selected_machinery_display]
+            else:
+                selected_machinery_id = None
+                machine_year = None
 
         with col_tech2:
-            snow_plows = [impl for impl in implements_list if impl.implement_type == 'snow_plow']
-            selected_implement = st.selectbox("Снегопах", [None] + snow_plows, format_func=lambda i: "Не выбрано" if i is None else f"{i.brand or ''} {i.model}")
-            implement_year = selected_implement.year if selected_implement else None
+            selected_implement_display = st.selectbox("Снегопах", ["Не выбрано"] + list(implement_options.keys()))
+
+            if selected_implement_display != "Не выбрано":
+                selected_implement_id, implement_year = implement_options[selected_implement_display]
+            else:
+                selected_implement_id = None
+                implement_year = None
 
         with col_tech3:
             work_speed_kmh = st.number_input("Скорость (км/ч)", min_value=0.0, value=None, step=0.5)
@@ -94,8 +120,8 @@ with tab1:
                 operation = Operation(
                     farm_id=farm.id, field_id=selected_field.id, operation_type="snow_retention",
                     operation_date=operation_date, end_date=end_date, area_processed_ha=area_processed,
-                    machine_id=selected_machinery.id if selected_machinery else None,
-                    implement_id=selected_implement.id if selected_implement else None,
+                    machine_id=selected_machinery_id,
+                    implement_id=selected_implement_id,
                     machine_year=machine_year, implement_year=implement_year,
                     work_speed_kmh=work_speed_kmh, notes=notes
                 )

@@ -172,18 +172,26 @@ with tab1:
         col_tech1, col_tech2, col_tech3 = st.columns(3)
 
         with col_tech1:
-            # Тракторы
-            tractors = [m for m in machinery_list if m.machinery_type == 'tractor']
+            # Тракторы - pre-load attributes
+            machinery_options = {}
+            for m in machinery_list:
+                if m.machinery_type == 'tractor':
+                    # Eagerly access attributes while still in session
+                    display_text = f"{m.brand or ''} {m.model} ({m.year or '-'})"
+                    machinery_options[display_text] = (m.id, m.year)
 
-            selected_machinery = st.selectbox(
+            selected_machinery_display = st.selectbox(
                 "Трактор",
-                options=[None] + tractors,
-                format_func=lambda m: "Не выбрано" if m is None else f"{m.brand or ''} {m.model} ({m.year or '-'})",
+                options=["Не выбрано"] + list(machinery_options.keys()),
                 help="Выберите трактор",
                 key="tillage_machinery"
             )
 
-            machine_year = selected_machinery.year if selected_machinery else None
+            if selected_machinery_display != "Не выбрано":
+                selected_machinery_id, machine_year = machinery_options[selected_machinery_display]
+            else:
+                selected_machinery_id = None
+                machine_year = None
 
         with col_tech2:
             # Фильтруем агрегаты в зависимости от типа обработки
@@ -199,20 +207,28 @@ with tab1:
             }
 
             suitable_types = implement_types_map.get(tillage_type, [])
-            suitable_implements = [impl for impl in implements_list if impl.implement_type in suitable_types]
 
-            selected_implement = st.selectbox(
+            # Pre-load implement attributes
+            implement_options = {}
+            for impl in implements_list:
+                if impl.implement_type in suitable_types:
+                    # Eagerly access attributes while still in session
+                    display_text = f"{impl.brand or ''} {impl.model} ({impl.working_width_m or '-'}м)"
+                    implement_options[display_text] = (impl.id, impl.year, impl.working_width_m)
+
+            selected_implement_display = st.selectbox(
                 "Агрегат",
-                options=[None] + suitable_implements,
-                format_func=lambda i: "Не выбрано" if i is None else f"{i.brand or ''} {i.model} ({i.working_width_m or '-'}м)",
+                options=["Не выбрано"] + list(implement_options.keys()),
                 help="Выберите агрегат для обработки",
                 key="tillage_implement"
             )
 
-            implement_year = selected_implement.year if selected_implement else None
-
-            if selected_implement:
-                st.caption(f"Ширина захвата: {selected_implement.working_width_m or '-'}м")
+            if selected_implement_display != "Не выбрано":
+                selected_implement_id, implement_year, implement_width = implement_options[selected_implement_display]
+                st.caption(f"Ширина захвата: {implement_width or '-'}м")
+            else:
+                selected_implement_id = None
+                implement_year = None
 
         with col_tech3:
             work_speed_kmh = st.number_input(
@@ -280,8 +296,8 @@ with tab1:
                         operation_date=operation_date,
                         end_date=end_date if end_date else None,
                         area_processed_ha=area_processed,
-                        machine_id=selected_machinery.id if selected_machinery else None,
-                        implement_id=selected_implement.id if selected_implement else None,
+                        machine_id=selected_machinery_id if selected_machinery_id else None,
+                        implement_id=selected_implement_id if selected_implement_id else None,
                         machine_year=machine_year,
                         implement_year=implement_year,
                         work_speed_kmh=work_speed_kmh if work_speed_kmh else None,

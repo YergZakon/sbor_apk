@@ -241,49 +241,68 @@ with tab1:
         machinery_list = filter_query_by_farm(db.query(Machinery).filter(Machinery.status == 'active'), Machinery).all()
         implements_list = filter_query_by_farm(db.query(Implements).filter(Implements.status == 'active'), Implements).all()
 
+        # Pre-load machinery attributes
+        spray_machinery = [m for m in machinery_list if m.machinery_type in ['tractor', 'self_propelled_sprayer', 'drone']]
+        machinery_options = {}
+        if spray_machinery:
+            for m in spray_machinery:
+                # Eagerly access attributes while still in session
+                display_text = f"{m.brand or ''} {m.model} ({m.machinery_type})"
+                machinery_options[display_text] = (m.id, m.year, m.machinery_type)
+
+        # Pre-load implement attributes
+        trailer_sprayers = [impl for impl in implements_list if impl.implement_type == 'sprayer_trailer']
+        implement_options = {}
+        if trailer_sprayers:
+            for i in trailer_sprayers:
+                # Eagerly access attributes while still in session
+                display_text = f"{i.brand or ''} {i.model} ({i.working_width_m or '-'}м)"
+                implement_options[display_text] = (i.id, i.year)
+
         col_tech1, col_tech2, col_tech3 = st.columns(3)
 
         with col_tech1:
-            # Фильтруем технику для опрыскивания: тракторы, самоходные опрыскиватели, дроны
-            spray_machinery = [m for m in machinery_list if m.machinery_type in ['tractor', 'self_propelled_sprayer', 'drone']]
-
-            selected_machinery = st.selectbox(
+            selected_machinery_display = st.selectbox(
                 "Техника *",
-                options=[None] + spray_machinery,
-                format_func=lambda m: "Не выбрано" if m is None else f"{m.brand or ''} {m.model} ({m.machinery_type})",
+                options=["Не выбрано"] + list(machinery_options.keys()),
                 help="Трактор, самоходный опрыскиватель или дрон",
                 key="pest_machinery"
             )
 
-            machine_year = selected_machinery.year if selected_machinery else None
+            if selected_machinery_display != "Не выбрано":
+                selected_machinery_id, machine_year, machinery_type = machinery_options[selected_machinery_display]
+            else:
+                selected_machinery_id = None
+                machine_year = None
+                machinery_type = None
 
             # Определяем, нужен ли агрегат
             needs_implement = False
-            if selected_machinery:
-                if selected_machinery.machinery_type in ['self_propelled_sprayer', 'drone']:
+            if selected_machinery_id:
+                if machinery_type in ['self_propelled_sprayer', 'drone']:
                     st.info("✅ Самоходная техника - агрегат не требуется")
                     needs_implement = False
-                elif selected_machinery.machinery_type == 'tractor':
+                elif machinery_type == 'tractor':
                     st.warning("⚠️ Для трактора требуется прицепной опрыскиватель")
                     needs_implement = True
 
         with col_tech2:
-            # Фильтруем только прицепные опрыскиватели
-            trailer_sprayers = [impl for impl in implements_list if impl.implement_type == 'sprayer_trailer']
-
             if needs_implement:
-                selected_implement = st.selectbox(
+                selected_implement_display = st.selectbox(
                     "Опрыскиватель (прицепной) *",
-                    options=[None] + trailer_sprayers,
-                    format_func=lambda i: "Не выбрано" if i is None else f"{i.brand or ''} {i.model} ({i.working_width_m or '-'}м)",
+                    options=["Не выбрано"] + list(implement_options.keys()),
                     help="Выберите прицепной опрыскиватель",
                     key="pest_implement"
                 )
 
-                implement_year = selected_implement.year if selected_implement else None
+                if selected_implement_display != "Не выбрано":
+                    selected_implement_id, implement_year = implement_options[selected_implement_display]
+                else:
+                    selected_implement_id = None
+                    implement_year = None
             else:
                 st.info("Агрегат не требуется для выбранной техники")
-                selected_implement = None
+                selected_implement_id = None
                 implement_year = None
 
         with col_tech3:
@@ -395,8 +414,8 @@ with tab1:
                         operation_date=application_date,
                         end_date=end_date if end_date else None,
                         area_processed_ha=area_processed,
-                        machine_id=selected_machinery.id if selected_machinery else None,
-                        implement_id=selected_implement.id if selected_implement else None,
+                        machine_id=selected_machinery_id,
+                        implement_id=selected_implement_id,
                         machine_year=machine_year,
                         implement_year=implement_year,
                         work_speed_kmh=work_speed_kmh if work_speed_kmh else None,

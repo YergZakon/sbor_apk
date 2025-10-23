@@ -212,18 +212,29 @@ with tab1:
         machinery_list = filter_query_by_farm(db.query(Machinery).filter(Machinery.status == 'active'), Machinery).all()
         combines = [m for m in machinery_list if m.machinery_type == 'combine']
 
+        # Pre-load machinery attributes
+        machinery_options = {}
+        if combines:
+            for m in combines:
+                # Eagerly access attributes while still in session
+                display_text = f"{m.brand or ''} {m.model} ({m.year or '-'})"
+                machinery_options[display_text] = (m.id, m.year)
+
         col_tech1, col_tech2 = st.columns(2)
 
         with col_tech1:
-            selected_machinery = st.selectbox(
+            selected_machinery_display = st.selectbox(
                 "Комбайн",
-                options=[None] + combines,
-                format_func=lambda m: "Не выбрано" if m is None else f"{m.brand or ''} {m.model} ({m.year or '-'})",
+                options=["Не выбрано"] + list(machinery_options.keys()),
                 help="Выберите комбайн для уборки",
                 key="harvest_machinery"
             )
 
-            machine_year = selected_machinery.year if selected_machinery else None
+            if selected_machinery_display != "Не выбрано":
+                selected_machinery_id, machine_year = machinery_options[selected_machinery_display]
+            else:
+                selected_machinery_id = None
+                machine_year = None
 
         with col_tech2:
             work_speed_kmh = st.number_input(
@@ -368,7 +379,7 @@ with tab1:
                         operation_date=harvest_date,
                         end_date=end_date if end_date else None,
                         area_processed_ha=area_harvested,
-                        machine_id=selected_machinery.id if selected_machinery else None,
+                        machine_id=selected_machinery_id,
                         machine_year=machine_year,
                         work_speed_kmh=work_speed_kmh if work_speed_kmh else None,
                         notes=notes

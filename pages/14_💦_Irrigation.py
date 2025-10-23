@@ -73,11 +73,24 @@ with tab1:
         machinery_list = filter_query_by_farm(db.query(Machinery).filter(Machinery.status == 'active'), Machinery).all()
         irrigation_systems = [m for m in machinery_list if m.machinery_type == 'irrigation_system']
 
+        # Pre-load machinery attributes
+        machinery_options = {}
+        if irrigation_systems:
+            for m in irrigation_systems:
+                # Eagerly access attributes while still in session
+                display_text = f"{m.brand or ''} {m.model}"
+                machinery_options[display_text] = (m.id, m.year)
+
         col_tech1, col_tech2 = st.columns(2)
 
         with col_tech1:
-            selected_machinery = st.selectbox("Система орошения", [None] + irrigation_systems, format_func=lambda m: "Не выбрано" if m is None else f"{m.brand or ''} {m.model}")
-            machine_year = selected_machinery.year if selected_machinery else None
+            selected_machinery_display = st.selectbox("Система орошения", ["Не выбрано"] + list(machinery_options.keys()))
+
+            if selected_machinery_display != "Не выбрано":
+                selected_machinery_id, machine_year = machinery_options[selected_machinery_display]
+            else:
+                selected_machinery_id = None
+                machine_year = None
 
         with col_tech2:
             soil_moisture_before = st.number_input("Влажность почвы до (%)", min_value=0.0, max_value=100.0, value=None, step=1.0)
@@ -91,7 +104,7 @@ with tab1:
                 operation = Operation(
                     farm_id=farm.id, field_id=selected_field.id, operation_type="irrigation",
                     operation_date=operation_date, end_date=end_date, area_processed_ha=area_processed,
-                    machine_id=selected_machinery.id if selected_machinery else None,
+                    machine_id=selected_machinery_id,
                     machine_year=machine_year, notes=notes
                 )
                 db.add(operation)

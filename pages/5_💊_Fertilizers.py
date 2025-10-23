@@ -174,32 +174,52 @@ with tab1:
         machinery_list = filter_query_by_farm(db.query(Machinery).filter(Machinery.status == 'active'), Machinery).all()
         implements_list = filter_query_by_farm(db.query(Implements).filter(Implements.status == 'active'), Implements).all()
 
+        # Pre-load machinery attributes
+        machinery_options = {}
+        if machinery_list:
+            for m in machinery_list:
+                # Eagerly access attributes while still in session
+                display_text = f"{m.brand or ''} {m.model} ({m.year or '-'})"
+                machinery_options[display_text] = (m.id, m.year)
+
+        # Pre-load implement attributes
+        fertilizer_spreaders = [impl for impl in implements_list if impl.implement_type == 'fertilizer_spreader']
+        implement_options = {}
+        if fertilizer_spreaders:
+            for i in fertilizer_spreaders:
+                # Eagerly access attributes while still in session
+                display_text = f"{i.brand or ''} {i.model} ({i.working_width_m or '-'}м)"
+                implement_options[display_text] = (i.id, i.year)
+
         col_tech1, col_tech2, col_tech3 = st.columns(3)
 
         with col_tech1:
-            selected_machinery = st.selectbox(
+            selected_machinery_display = st.selectbox(
                 "Техника (трактор)",
-                options=[None] + machinery_list,
-                format_func=lambda m: "Не выбрано" if m is None else f"{m.brand or ''} {m.model} ({m.year or '-'})",
+                options=["Не выбрано"] + list(machinery_options.keys()),
                 help="Выберите трактор или другую технику",
                 key="fert_machinery"
             )
 
-            machine_year = selected_machinery.year if selected_machinery else None
+            if selected_machinery_display != "Не выбрано":
+                selected_machinery_id, machine_year = machinery_options[selected_machinery_display]
+            else:
+                selected_machinery_id = None
+                machine_year = None
 
         with col_tech2:
-            # Фильтруем разбрасыватели удобрений
-            fertilizer_spreaders = [impl for impl in implements_list if impl.implement_type == 'fertilizer_spreader']
-
-            selected_implement = st.selectbox(
+            selected_implement_display = st.selectbox(
                 "Агрегат (разбрасыватель)",
-                options=[None] + fertilizer_spreaders,
-                format_func=lambda i: "Не выбрано" if i is None else f"{i.brand or ''} {i.model} ({i.working_width_m or '-'}м)",
+                options=["Не выбрано"] + list(implement_options.keys()),
                 help="Выберите разбрасыватель удобрений",
                 key="fert_implement"
             )
 
-            implement_year = selected_implement.year if selected_implement else None
+            if selected_implement_display != "Не выбрано":
+                selected_implement_id, implement_year = implement_options[selected_implement_display]
+            else:
+                selected_implement_id = None
+                implement_year = None
 
         with col_tech3:
             end_date = st.date_input(
@@ -310,8 +330,8 @@ with tab1:
                         operation_date=application_date,
                         end_date=end_date if end_date else None,
                         area_processed_ha=area_processed,
-                        machine_id=selected_machinery.id if selected_machinery else None,
-                        implement_id=selected_implement.id if selected_implement else None,
+                        machine_id=selected_machinery_id,
+                        implement_id=selected_implement_id,
                         machine_year=machine_year,
                         implement_year=implement_year,
                         work_speed_kmh=work_speed_kmh if work_speed_kmh else None,
