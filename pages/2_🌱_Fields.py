@@ -58,17 +58,8 @@ try:
 
     st.markdown("### 📋 Список полей")
 
-    # Отладочная информация
-    from modules.auth import get_current_user
-    user = get_current_user()
-    st.info(f"🔍 DEBUG: User ID: {user.get('id')}, farm_id в session: {user.get('farm_id')}, farm.id из БД: {farm.id}")
-
-    # Проверим, сколько полей есть в БД для этого хозяйства
-    all_fields_for_farm = db.query(Field).filter(Field.farm_id == farm.id).all()
-    st.info(f"🔍 DEBUG: Всего полей в БД для farm_id={farm.id}: {len(all_fields_for_farm)}")
-
+    # Получение полей для текущего хозяйства
     fields = filter_query_by_farm(db.query(Field), Field).all()
-    st.info(f"🔍 DEBUG: Полей после filter_query_by_farm: {len(fields)}")
 
     if fields:
         # Создание DataFrame для отображения

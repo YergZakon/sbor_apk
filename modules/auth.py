@@ -224,30 +224,24 @@ def filter_query_by_farm(query, model):
 
     if not user:
         # Если не авторизован - пустой результат
-        print("DEBUG filter_query_by_farm: No user")
         return query.filter(False)
 
     # Админ видит всё
     if user.get("role") == "admin":
-        print(f"DEBUG filter_query_by_farm: Admin user, model={model.__name__}")
         return query
 
     # Фермер и Viewer видят только данные своего хозяйства
     farm_id = user.get("farm_id")
-    print(f"DEBUG filter_query_by_farm: model={model.__name__}, user_id={user.get('id')}, farm_id={farm_id}, hasattr={hasattr(model, 'farm_id')}")
 
     if not farm_id:
         # Если не привязан к хозяйству - пустой результат
-        print("DEBUG filter_query_by_farm: No farm_id, returning empty")
         return query.filter(False)
 
     # Фильтруем по farm_id
     if hasattr(model, 'farm_id'):
-        print(f"DEBUG filter_query_by_farm: Filtering by farm_id={farm_id}")
         return query.filter(model.farm_id == farm_id)
     else:
         # Если у модели нет farm_id напрямую, возвращаем как есть
-        print(f"DEBUG filter_query_by_farm: Model has no farm_id, returning unfiltered")
         return query
 
 
