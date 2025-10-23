@@ -174,68 +174,83 @@ try:
             help="Выберите модель из справочника для автозаполнения или введите данные вручную"
         )
 
+        # Выбор типа техники (вне формы для динамического обновления)
+        machinery_type = st.selectbox(
+            "Тип техники *",
+            options=['tractor', 'combine', 'self_propelled_sprayer', 'drone', 'irrigation_system', 'other'],
+            format_func=lambda x: {
+                'tractor': 'Трактор',
+                'combine': 'Комбайн',
+                'self_propelled_sprayer': 'Самоходный опрыскиватель',
+                'drone': 'Дрон',
+                'irrigation_system': 'Система орошения',
+                'other': 'Другое'
+            }[x],
+            key="machinery_type_select"
+        )
+
+        # Автозаполнение из справочника (вне формы для динамического обновления)
+        selected_ref_model = None
+        ref_data = None
+
+        if add_mode == "Из справочника":
+            if machinery_type == 'tractor' and tractors_ref:
+                st.markdown("**📚 Выбор из справочника тракторов**")
+
+                col_ref1, col_ref2 = st.columns(2)
+
+                with col_ref1:
+                    # Выбор производителя
+                    brands = sorted(set(v['производитель'] for v in tractors_ref.values()))
+                    selected_brand = st.selectbox("Производитель", brands, key="tractor_brand")
+
+                with col_ref2:
+                    # Фильтрация моделей по производителю
+                    filtered_models = {k: v for k, v in tractors_ref.items() if v['производитель'] == selected_brand}
+
+                    if filtered_models:
+                        selected_ref_model = st.selectbox("Модель из справочника", list(filtered_models.keys()), key="tractor_model")
+                        ref_data = filtered_models[selected_ref_model]
+
+                # Показать характеристики
+                if ref_data:
+                    st.success(f"💪 Мощность: {ref_data['мощность_лс']} л.с. | "
+                               f"🏷️ Класс: {ref_data['класс']} | "
+                               f"🚜 Тип: {ref_data['тип']}")
+
+            elif machinery_type == 'combine' and combines_ref:
+                st.markdown("**📚 Выбор из справочника комбайнов**")
+
+                col_ref1, col_ref2 = st.columns(2)
+
+                with col_ref1:
+                    # Выбор производителя
+                    brands = sorted(set(v['производитель'] for v in combines_ref.values()))
+                    selected_brand = st.selectbox("Производитель", brands, key="combine_brand")
+
+                with col_ref2:
+                    # Фильтрация моделей по производителю
+                    filtered_models = {k: v for k, v in combines_ref.items() if v['производитель'] == selected_brand}
+
+                    if filtered_models:
+                        selected_ref_model = st.selectbox("Модель из справочника", list(filtered_models.keys()), key="combine_model")
+                        ref_data = filtered_models[selected_ref_model]
+
+                # Показать характеристики
+                if ref_data:
+                    st.success(f"💪 Мощность: {ref_data['мощность_лс']} л.с. | "
+                               f"🏷️ Класс: {ref_data['класс']} | "
+                               f"⚙️ Молотилка: {ref_data['молотильный_аппарат']}")
+            else:
+                st.info("💡 Справочник недоступен для этого типа техники. Используйте ручной ввод ниже.")
+
+        st.markdown("---")
+
+        # ФОРМА (данные предзаполнены из выбора выше)
         with st.form("add_machinery_form", clear_on_submit=True):
             col1, col2 = st.columns(2)
 
             with col1:
-                machinery_type = st.selectbox(
-                    "Тип техники *",
-                    options=['tractor', 'combine', 'self_propelled_sprayer', 'drone', 'irrigation_system', 'other'],
-                    format_func=lambda x: {
-                        'tractor': 'Трактор',
-                        'combine': 'Комбайн',
-                        'self_propelled_sprayer': 'Самоходный опрыскиватель',
-                        'drone': 'Дрон',
-                        'irrigation_system': 'Система орошения',
-                        'other': 'Другое'
-                    }[x]
-                )
-
-                # Автозаполнение из справочника
-                selected_ref_model = None
-                ref_data = None
-
-                if add_mode == "Из справочника":
-                    if machinery_type == 'tractor' and tractors_ref:
-                        st.markdown("**📚 Выбор из справочника тракторов**")
-
-                        # Выбор производителя
-                        brands = sorted(set(v['производитель'] for v in tractors_ref.values()))
-                        selected_brand = st.selectbox("Производитель", brands, key="tractor_brand")
-
-                        # Фильтрация моделей по производителю
-                        filtered_models = {k: v for k, v in tractors_ref.items() if v['производитель'] == selected_brand}
-
-                        if filtered_models:
-                            selected_ref_model = st.selectbox("Модель из справочника", list(filtered_models.keys()), key="tractor_model")
-                            ref_data = filtered_models[selected_ref_model]
-
-                            # Показать характеристики
-                            st.info(f"💪 Мощность: {ref_data['мощность_лс']} л.с. | "
-                                   f"🏷️ Класс: {ref_data['класс']} | "
-                                   f"🚜 Тип: {ref_data['тип']}")
-
-                    elif machinery_type == 'combine' and combines_ref:
-                        st.markdown("**📚 Выбор из справочника комбайнов**")
-
-                        # Выбор производителя
-                        brands = sorted(set(v['производитель'] for v in combines_ref.values()))
-                        selected_brand = st.selectbox("Производитель", brands, key="combine_brand")
-
-                        # Фильтрация моделей по производителю
-                        filtered_models = {k: v for k, v in combines_ref.items() if v['производитель'] == selected_brand}
-
-                        if filtered_models:
-                            selected_ref_model = st.selectbox("Модель из справочника", list(filtered_models.keys()), key="combine_model")
-                            ref_data = filtered_models[selected_ref_model]
-
-                            # Показать характеристики
-                            st.info(f"💪 Мощность: {ref_data['мощность_лс']} л.с. | "
-                                   f"🏷️ Класс: {ref_data['класс']} | "
-                                   f"⚙️ Молотилка: {ref_data['молотильный_аппарат']}")
-                    else:
-                        st.warning("Справочник недоступен для этого типа техники. Используйте ручной ввод.")
-
                 # Поля для ручного ввода или переопределения
                 if ref_data:
                     brand = st.text_input("Марка", value=ref_data['производитель'], disabled=True)
