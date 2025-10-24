@@ -256,9 +256,21 @@ try:
                 for error in errors:
                     st.error(f"❌ {error}")
             else:
-                # Генерация кода поля
-                existing_codes = db.query(Field.field_code).all()
-                field_number = len(existing_codes) + 1
+                # Генерация кода поля (находим максимальный номер и добавляем 1)
+                existing_codes = db.query(Field.field_code).filter(
+                    Field.field_code.like('field_%')
+                ).all()
+
+                # Извлекаем числа из кодов и находим максимальное
+                max_number = 0
+                for (code,) in existing_codes:
+                    try:
+                        number = int(code.split('_')[1])
+                        max_number = max(max_number, number)
+                    except (ValueError, IndexError):
+                        continue
+
+                field_number = max_number + 1
                 field_code = f"field_{field_number:03d}"
 
                 # Создание поля
