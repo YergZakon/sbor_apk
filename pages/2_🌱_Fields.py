@@ -345,15 +345,19 @@ try:
 
                     if delete_btn:
                         # Проверка на связанные данные
-                        operations_count = db.query(Operation).filter(Operation.field_id == selected_field.id).count()
+                        field_id = selected_field.id
+                        operations_count = db.query(Operation).filter(Operation.field_id == field_id).count()
 
                         if operations_count > 0:
                             st.error(f"❌ Невозможно удалить поле: есть связанные данные ({operations_count} операций)")
                         else:
-                            db.delete(selected_field)
-                            db.commit()
-                            st.success("✅ Поле удалено!")
-                            st.rerun()
+                            # Получаем объект из текущей сессии перед удалением
+                            field_to_delete = db.query(Field).filter(Field.id == field_id).first()
+                            if field_to_delete:
+                                db.delete(field_to_delete)
+                                db.commit()
+                                st.success("✅ Поле удалено!")
+                                st.rerun()
 
     st.markdown("---")
 
