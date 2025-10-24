@@ -5,7 +5,7 @@ Fields - Управление полями
 import streamlit as st
 import pandas as pd
 from sqlalchemy.orm import Session
-from modules.database import SessionLocal, Farm, Field
+from modules.database import SessionLocal, Farm, Field, Operation
 from modules.auth import (
     require_auth,
     require_farm_binding,
@@ -345,10 +345,10 @@ try:
 
                     if delete_btn:
                         # Проверка на связанные данные
-                        operations_count = db.query(Field).filter(Field.id == selected_field.id).count()
+                        operations_count = db.query(Operation).filter(Operation.field_id == selected_field.id).count()
 
                         if operations_count > 0:
-                            st.error(f"❌ Невозможно удалить поле: есть связанные данные (операции)")
+                            st.error(f"❌ Невозможно удалить поле: есть связанные данные ({operations_count} операций)")
                         else:
                             db.delete(selected_field)
                             db.commit()
