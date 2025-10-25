@@ -42,7 +42,7 @@ async def health_check():
     return {"status": "healthy", "environment": settings.ENVIRONMENT}
 
 
-# Import and include routers (will add later)
-# from .api.v1 import auth, farms, fields, operations
-# app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
-# app.include_router(farms.router, prefix=f"{settings.API_V1_STR}/farms", tags=["farms"])
+# Import and include API v1 router
+from app.api.v1 import api_router
+
+app.include_router(api_router, prefix=settings.API_V1_STR)
