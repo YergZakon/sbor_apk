@@ -156,7 +156,8 @@ with tab1:
                 variety_name = st.selectbox(
                     "Сорт",
                     options=["Не указан"] + varieties,
-                    help="Выберите сорт"
+                    help="Выберите сорт",
+                    key=f"harvest_variety_select_{crop_name}"
                 ) if varieties else None
 
             # Убранная площадь

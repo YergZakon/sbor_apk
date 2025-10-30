@@ -344,6 +344,7 @@ try:
                         delete_btn = st.form_submit_button("🗑️ Удалить", use_container_width=True, type="secondary")
 
                     if update_btn:
+                        # Явно фиксируем изменения и обновляем объект в сессии
                         selected_field.name = edit_name
                         selected_field.area_ha = edit_area
                         selected_field.cadastral_number = edit_cadastral if edit_cadastral else None
@@ -351,7 +352,10 @@ try:
                         selected_field.ph_water = edit_ph if edit_ph > 0 else None
                         selected_field.humus_pct = edit_humus if edit_humus > 0 else None
 
+                        db.add(selected_field)
+                        db.flush()
                         db.commit()
+                        db.refresh(selected_field)
                         st.success("✅ Поле обновлено!")
                         st.rerun()
 

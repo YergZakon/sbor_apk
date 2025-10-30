@@ -154,12 +154,13 @@ try:
             crop_data = crops_reference[selected_crop]
 
         with col2:
-            # Выбор сорта
+            # Выбор сорта (реактивный к выбранной культуре)
             varieties = crop_data.get("сорта", [])
             selected_variety = st.selectbox(
                 "Сорт*",
                 options=varieties if varieties else ["Не указан"],
-                help="Выберите сорт культуры"
+                help="Выберите сорт культуры",
+                key=f"variety_select_{selected_crop}"
             )
 
         # Показать рекомендации
@@ -242,7 +243,7 @@ try:
         with col1:
             seed_reproduction = st.selectbox(
                 "Репродукция семян",
-                options=['Элита', 'Суперэлита', '1-я репродукция', '2-я репродукция', '3-я репродукция', 'Другое'],
+                options=['Элита', 'Суперэлита', '1-я репродукция', '2-я репродукция', '3-я репродукция', 'Гибрид F1', 'Гибрид F2', 'Гибрид F3', 'Другое'],
                 index=None,
                 help="Репродукция используемого семенного материала"
             )

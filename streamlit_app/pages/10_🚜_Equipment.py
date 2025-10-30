@@ -93,7 +93,7 @@ try:
 
     with tab1:
         st.markdown("### 🚜 Техника")
-        st.caption("Тракторы, комбайны, самоходные опрыскиватели, дроны, системы орошения")
+        st.caption("Тракторы, комбайны, самоходные опрыскиватели, самоходные косилки, дроны, системы орошения")
 
         # Список техники
         machinery_list = filter_query_by_farm(db.query(Machinery), Machinery).all()
@@ -129,12 +129,13 @@ try:
                 machinery_data.append({
                     'ID': m_id,
                     'Тип': {
-                        'tractor': 'Трактор',
-                        'combine': 'Комбайн',
-                        'self_propelled_sprayer': 'Самоходный опрыскиватель',
-                        'drone': 'Дрон',
-                        'irrigation_system': 'Система орошения',
-                        'other': 'Другое'
+                    'tractor': 'Трактор',
+                    'combine': 'Комбайн',
+                    'self_propelled_sprayer': 'Самоходный опрыскиватель',
+                    'self_propelled_mower': 'Самоходная косилка',
+                    'drone': 'Дрон',
+                    'irrigation_system': 'Система орошения',
+                    'other': 'Другое'
                     }.get(m_type, m_type),
                     'Марка': m_brand or '-',
                     'Модель': m_model,
@@ -186,11 +187,12 @@ try:
         # Выбор типа техники (вне формы для динамического обновления)
         machinery_type = st.selectbox(
             "Тип техники *",
-            options=['tractor', 'combine', 'self_propelled_sprayer', 'drone', 'irrigation_system', 'other'],
+            options=['tractor', 'combine', 'self_propelled_sprayer', 'self_propelled_mower', 'drone', 'irrigation_system', 'other'],
             format_func=lambda x: {
                 'tractor': 'Трактор',
                 'combine': 'Комбайн',
                 'self_propelled_sprayer': 'Самоходный опрыскиватель',
+                'self_propelled_mower': 'Самоходная косилка',
                 'drone': 'Дрон',
                 'irrigation_system': 'Система орошения',
                 'other': 'Другое'
