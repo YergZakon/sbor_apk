@@ -38,6 +38,12 @@ def load_reference(filename: str, show_error: bool = True) -> Dict[str, Any]:
         # Абсолютный путь через корень проекта
         Path(__file__).resolve().parent.parent.parent / "data" / filename,
         Path(__file__).resolve().parent.parent.parent / "shared" / "data" / filename,
+
+        # НОВЫЕ ПУТИ для Streamlit Cloud (часто cwd == streamlit_app)
+        Path.cwd() / "shared" / "data" / filename,
+        Path.cwd().parent / "data" / filename,
+        Path.cwd().parent / "streamlit_app" / "data" / filename,
+        Path.cwd().parent / "shared" / "data" / filename,
     ]
 
     # Удаляем дубликаты и нормализуем пути
@@ -59,14 +65,58 @@ def load_reference(filename: str, show_error: bool = True) -> Dict[str, Any]:
             # Игнорируем ошибки чтения (файл не существует и т.д.)
             continue
 
-    # Если ни один путь не сработал, показываем ошибку
+    # Если ни один путь не сработал, показываем детальную ошибку
     if show_error:
-        tried_paths = "\n".join(f"  - {p}" for p in candidate_paths[:5])  # Показываем первые 5
-        st.error(
-            f"❌ Справочник **{filename}** не найден!\n\n"
-            f"Искали в:\n{tried_paths}\n\n"
-            f"💡 Проверьте, что файл существует в `streamlit_app/data/` или `streamlit_app/shared/data/`"
-        )
+        import os
+
+        # Показываем отладочную информацию
+        st.error(f"❌ Справочник **{filename}** не найден!")
+
+        with st.expander("🔍 Отладочная информация (нажмите для раскрытия)", expanded=False):
+            st.markdown("**Текущая рабочая директория:**")
+            st.code(str(Path.cwd()))
+
+            st.markdown("**Путь к модулю reference_loader:**")
+            st.code(str(Path(__file__)))
+
+            st.markdown(f"**Проверено {len(candidate_paths)} путей:**")
+            for i, p in enumerate(candidate_paths[:10], 1):  # Показываем первые 10
+                exists_marker = "✅" if p.exists() else "❌"
+                st.text(f"{exists_marker} {i}. {p}")
+
+            if len(candidate_paths) > 10:
+                st.caption(f"... и ещё {len(candidate_paths) - 10} путей")
+
+            # Проверяем, есть ли хоть какая-то папка data
+            st.markdown("**Существующие data/ директории:**")
+            data_dirs = [
+                Path.cwd() / "data",
+                Path.cwd() / "streamlit_app" / "data",
+                Path.cwd() / "shared" / "data",
+                Path(__file__).parent.parent / "data",
+            ]
+            found_any = False
+            for d in data_dirs:
+                if d.exists():
+                    found_any = True
+                    try:
+                        files = list(d.glob("*.json"))
+                        st.success(f"✅ {d} ({len(files)} JSON файлов)")
+                        if files:
+                            st.text("   Файлы: " + ", ".join(f.name for f in files[:5]))
+                    except Exception as e:
+                        st.warning(f"✅ {d} (ошибка чтения: {e})")
+
+            if not found_any:
+                st.error("⚠️ Ни одной data/ директории не найдено!")
+
+            st.markdown("**💡 Решение:**")
+            st.info(
+                f"1. Убедитесь, что файл `{filename}` существует в репозитории\n"
+                f"2. Проверьте путь: `streamlit_app/data/{filename}` или `streamlit_app/shared/data/{filename}`\n"
+                f"3. Перезапустите приложение на Streamlit Cloud\n"
+                f"4. Используйте страницу '🔧 Debug Paths' для диагностики"
+            )
 
     return {}
 
