@@ -26,6 +26,7 @@ from modules.auth import (
 )
 from modules.validators import DataValidator
 from utils.formatters import format_date, format_area
+from utils.reference_loader import load_diseases, load_pests, load_weeds
 
 # Настройка страницы
 st.set_page_config(page_title="Фитосанитария", page_icon="🐛", layout="wide")
@@ -40,20 +41,10 @@ st.caption(f"Пользователь: **{get_user_display_name()}**")
 # Инициализация валидатора
 validator = DataValidator()
 
-# Загрузка справочников
-def load_reference(filename):
-    """Загрузка справочника из JSON"""
-    reference_path = Path(__file__).parent.parent / "data" / filename
-    try:
-        with open(reference_path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        st.error(f"Справочник {filename} не найден!")
-        return {}
-
-diseases_ref = load_reference("diseases.json")
-pests_ref = load_reference("pests.json")
-weeds_ref = load_reference("weeds.json")
+# Загрузка справочников через универсальный загрузчик
+diseases_ref = load_diseases()
+pests_ref = load_pests()
+weeds_ref = load_weeds()
 
 # Подключение к БД
 db = next(get_db())

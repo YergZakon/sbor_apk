@@ -26,6 +26,7 @@ from modules.auth import (
 )
 from modules.validators import DataValidator
 from utils.formatters import format_date, format_area, format_number, format_npk
+from utils.reference_loader import load_fertilizers, load_tractors
 
 # Настройка страницы
 st.set_page_config(page_title="Удобрения", page_icon="💊", layout="wide")
@@ -40,31 +41,12 @@ st.caption(f"Пользователь: **{get_user_display_name()}**")
 # Инициализация валидатора
 validator = DataValidator()
 
-# Загрузка справочника удобрений
-def load_fertilizers_reference():
-    """Загрузка справочника удобрений из JSON"""
-    reference_path = Path(__file__).parent.parent / "data" / "fertilizers.json"
-    try:
-        with open(reference_path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        st.error("Справочник удобрений не найден!")
-        return {}
-
-fertilizers_ref = load_fertilizers_reference()
+# Загрузка справочников через универсальный загрузчик
+fertilizers_ref = load_fertilizers()
+tractors_ref = load_tractors()
 
 # Подключение к БД
 db = next(get_db())
-
-# Загрузка справочника тракторов
-tractors_ref = {}
-try:
-    tractors_path = Path('data/tractors.json')
-    if tractors_path.exists():
-        with open(tractors_path, 'r', encoding='utf-8') as f:
-            tractors_ref = json.load(f)
-except Exception as e:
-    pass  # Справочник опционален
 
 # Проверка наличия хозяйства
 user = get_current_user()

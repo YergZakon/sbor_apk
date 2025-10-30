@@ -21,6 +21,7 @@ from modules.auth import (
 )
 from modules.validators import validator
 from modules.config import settings
+from utils.reference_loader import load_crops, load_tractors
 
 # Настройка страницы
 st.set_page_config(page_title="Посев", page_icon="🌾", layout="wide")
@@ -36,19 +37,9 @@ st.caption(f"Пользователь: **{get_user_display_name()}**")
 # Получение сессии БД
 db = SessionLocal()
 
-# Загрузка справочника культур
-with open('data/crops.json', 'r', encoding='utf-8') as f:
-    crops_reference = json.load(f)
-
-# Загрузка справочников техники
-tractors_ref = {}
-try:
-    tractors_path = Path('data/tractors.json')
-    if tractors_path.exists():
-        with open(tractors_path, 'r', encoding='utf-8') as f:
-            tractors_ref = json.load(f)
-except Exception as e:
-    pass  # Справочник опционален
+# Загрузка справочников через универсальный загрузчик
+crops_reference = load_crops()
+tractors_ref = load_tractors()
 
 try:
     # Проверка наличия хозяйства
