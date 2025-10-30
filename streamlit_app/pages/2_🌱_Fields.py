@@ -17,6 +17,7 @@ from modules.auth import (
 from modules.validators import validator
 from modules.config import settings
 import json
+from pathlib import Path
 
 # Настройка страницы
 st.set_page_config(page_title="Поля", page_icon="🌱", layout="wide")
@@ -106,6 +107,18 @@ try:
 
     st.markdown("### ➕ Добавить новое поле")
 
+    # Справочник типов почв: объединяем статический список и JSON-справочник (если есть)
+    soil_types_set = set(settings.SOIL_TYPES)
+    soil_types_path = Path('data/soil_types.json')
+    if soil_types_path.exists():
+        try:
+            with open(soil_types_path, 'r', encoding='utf-8') as f:
+                soil_types_json = json.load(f)
+                soil_types_set.update(list(soil_types_json.keys()))
+        except Exception:
+            pass
+    soil_types_options = ["Не указан"] + sorted(soil_types_set)
+
     with st.form("add_field_form"):
         col1, col2 = st.columns(2)
 
@@ -160,7 +173,7 @@ try:
 
             soil_type = st.selectbox(
                 "Тип почвы",
-                options=["Не указан"] + settings.SOIL_TYPES,
+                options=soil_types_options,
                 help="Тип почвы по классификации"
             )
 
@@ -329,8 +342,10 @@ try:
                     with col2:
                         edit_soil_type = st.selectbox(
                             "Тип почвы",
-                            options=["Не указан"] + settings.SOIL_TYPES,
-                            index=settings.SOIL_TYPES.index(selected_field.soil_type) + 1 if selected_field.soil_type in settings.SOIL_TYPES else 0
+                            options=soil_types_options,
+                            index=(soil_types_options.index(selected_field.soil_type)
+                                   if (selected_field.soil_type and selected_field.soil_type in soil_types_options)
+                                   else 0)
                         )
                         edit_ph = st.number_input("pH водный", value=float(selected_field.ph_water or 0), min_value=4.0, max_value=9.5, step=0.1)
                         edit_humus = st.number_input("Гумус (%)", value=float(selected_field.humus_pct or 0), min_value=0.0, max_value=12.0, step=0.1)
