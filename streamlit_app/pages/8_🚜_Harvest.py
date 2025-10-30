@@ -149,7 +149,8 @@ with tab1:
                 crop_name = st.selectbox(
                     "Культура *",
                     options=list(crops_ref.keys()),
-                    help="Выберите культуру"
+                    help="Выберите культуру",
+                    key="harvest_crop_select"
                 )
 
                 varieties = list(crops_ref[crop_name].get("сорта", [])) if crop_name in crops_ref else []
@@ -157,8 +158,8 @@ with tab1:
                     "Сорт",
                     options=["Не указан"] + varieties,
                     help="Выберите сорт",
-                    key=f"harvest_variety_select_{crop_name}"
-                ) if varieties else None
+                    key="harvest_variety_select"
+                ) if varieties else "Не указан"
 
             # Убранная площадь
             area_harvested = st.number_input(

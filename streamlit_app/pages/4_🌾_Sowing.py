@@ -138,7 +138,8 @@ try:
             selected_crop = st.selectbox(
                 "Культура*",
                 options=list(crops_reference.keys()),
-                help="Выберите культуру для посева"
+                help="Выберите культуру для посева",
+                key="sowing_crop_select"
             )
 
             # Получение данных о культуре
@@ -149,9 +150,9 @@ try:
             varieties = crop_data.get("сорта", [])
             selected_variety = st.selectbox(
                 "Сорт*",
-                options=varieties if varieties else ["Не указан"],
+                options=["Не указан"] + (varieties if varieties else []),
                 help="Выберите сорт культуры",
-                key=f"variety_select_{selected_crop}"
+                key="sowing_variety_select"
             )
 
         # Показать рекомендации

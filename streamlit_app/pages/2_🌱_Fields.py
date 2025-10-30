@@ -335,9 +335,9 @@ try:
                     col1, col2 = st.columns(2)
 
                     with col1:
-                        edit_name = st.text_input("Название", value=selected_field.name or "")
-                        edit_area = st.number_input("Площадь (га)", value=float(selected_field.area_ha or 0), min_value=0.1, step=0.1)
-                        edit_cadastral = st.text_input("Кадастровый номер", value=selected_field.cadastral_number or "")
+                        edit_name = st.text_input("Название", value=selected_field.name or "", key=f"edit_name_{selected_field.id}")
+                        edit_area = st.number_input("Площадь (га)", value=float(selected_field.area_ha or 0), min_value=0.1, step=0.1, key=f"edit_area_{selected_field.id}")
+                        edit_cadastral = st.text_input("Кадастровый номер", value=selected_field.cadastral_number or "", key=f"edit_cadastral_{selected_field.id}")
 
                     with col2:
                         edit_soil_type = st.selectbox(
