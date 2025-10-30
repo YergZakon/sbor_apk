@@ -20,27 +20,25 @@ def load_reference(filename: str, show_error: bool = True) -> Dict[str, Any]:
         Словарь с данными или пустой словарь при ошибке
     """
     # Определяем возможные пути поиска справочника
+    # ПРИОРИТЕТ: Streamlit Cloud запускает app.py из streamlit_app/, поэтому cwd == streamlit_app/
     candidate_paths = [
+        # ВЫСШИЙ ПРИОРИТЕТ: Streamlit Cloud (cwd = streamlit_app/)
+        Path.cwd() / "data" / filename,                    # streamlit_app/data/
+        Path.cwd() / "shared" / "data" / filename,         # streamlit_app/shared/data/
+
         # Относительно текущей страницы (работает для pages/)
-        Path(__file__).parent.parent / "data" / filename,
+        Path(__file__).parent.parent / "data" / filename,            # utils/../data/
+        Path(__file__).parent.parent / "shared" / "data" / filename, # utils/../shared/data/
 
-        # Относительно корня streamlit_app
-        Path(__file__).parent.parent / "streamlit_app" / "data" / filename,
-
-        # Shared data directory
-        Path(__file__).parent.parent / "shared" / "data" / filename,
-
-        # Рабочая директория (откуда запущен streamlit)
-        Path.cwd() / "data" / filename,
+        # Если запущено из корня проекта (локальная разработка)
         Path.cwd() / "streamlit_app" / "data" / filename,
         Path.cwd() / "streamlit_app" / "shared" / "data" / filename,
 
-        # Абсолютный путь через корень проекта
+        # Абсолютные пути через корень проекта
         Path(__file__).resolve().parent.parent.parent / "data" / filename,
         Path(__file__).resolve().parent.parent.parent / "shared" / "data" / filename,
 
-        # НОВЫЕ ПУТИ для Streamlit Cloud (часто cwd == streamlit_app)
-        Path.cwd() / "shared" / "data" / filename,
+        # Дополнительные варианты
         Path.cwd().parent / "data" / filename,
         Path.cwd().parent / "streamlit_app" / "data" / filename,
         Path.cwd().parent / "shared" / "data" / filename,
