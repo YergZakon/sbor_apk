@@ -359,20 +359,23 @@ try:
                         delete_btn = st.form_submit_button("🗑️ Удалить", use_container_width=True, type="secondary")
 
                     if update_btn:
-                        # Явно фиксируем изменения и обновляем объект в сессии
-                        selected_field.name = edit_name
-                        selected_field.area_ha = edit_area
-                        selected_field.cadastral_number = edit_cadastral if edit_cadastral else None
-                        selected_field.soil_type = edit_soil_type if edit_soil_type != "Не указан" else None
-                        selected_field.ph_water = edit_ph if edit_ph > 0 else None
-                        selected_field.humus_pct = edit_humus if edit_humus > 0 else None
+                        # Получаем объект поля из текущей сессии для обновления
+                        field_to_update = db.query(Field).filter(Field.id == selected_field.id).first()
 
-                        db.add(selected_field)
-                        db.flush()
-                        db.commit()
-                        db.refresh(selected_field)
-                        st.success("✅ Поле обновлено!")
-                        st.rerun()
+                        if field_to_update:
+                            # Обновляем атрибуты
+                            field_to_update.name = edit_name
+                            field_to_update.area_ha = edit_area
+                            field_to_update.cadastral_number = edit_cadastral if edit_cadastral else None
+                            field_to_update.soil_type = edit_soil_type if edit_soil_type != "Не указан" else None
+                            field_to_update.ph_water = edit_ph if edit_ph > 0 else None
+                            field_to_update.humus_pct = edit_humus if edit_humus > 0 else None
+
+                            db.commit()
+                            st.success("✅ Поле обновлено!")
+                            st.rerun()
+                        else:
+                            st.error("❌ Ошибка: поле не найдено в базе данных")
 
                     if delete_btn:
                         # Проверка на связанные данные
