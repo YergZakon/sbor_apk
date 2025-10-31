@@ -296,7 +296,7 @@ try:
                     soil_type=soil_type if soil_type != "Не указан" else None,
                     soil_texture=soil_texture if soil_texture != "Не указан" else None,
                     relief=relief if relief != "Не указан" else None,
-                    slope_degree=slope_degree if slope_degree > 0 else None,
+                    slope_degree=slope_degree if slope_degree and slope_degree > 0 else None,
                     ph_water=ph_water if ph_water else None,
                     humus_pct=humus_pct if humus_pct else None,
                     p2o5_mg_kg=p2o5_mg_kg if p2o5_mg_kg else None,
