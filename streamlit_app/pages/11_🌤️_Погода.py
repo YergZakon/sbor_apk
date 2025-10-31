@@ -234,23 +234,22 @@ with tab1:
                 st.error("❌ Ошибки валидации:\n" + "\n".join(f"- {e}" for e in errors))
             else:
                 try:
-                    # Создаем запись погоды
+                    # Создаем запись погоды с правильными названиями полей из модели
+                    from datetime import datetime as dt
                     weather = WeatherData(
                         farm_id=farm.id,
-                        observation_date=observation_date,
+                        datetime=dt.combine(observation_date, dt.min.time()),  # Модель использует datetime, не observation_date
                         temp_max_c=temp_max,
                         temp_min_c=temp_min,
-                        temp_avg_c=temp_avg,
-                        soil_temp_c=soil_temp if soil_temp else None,
+                        temp_air_c=temp_avg,  # Модель использует temp_air_c, не temp_avg_c
+                        temp_soil_10cm_c=soil_temp if soil_temp else None,  # Модель использует temp_soil_10cm_c
                         precipitation_mm=precipitation,
-                        humidity_percent=humidity if humidity else None,
+                        humidity_pct=humidity if humidity else None,  # Модель использует humidity_pct, не humidity_percent
                         wind_speed_ms=wind_speed if wind_speed else None,
                         wind_direction=wind_direction if wind_direction != "Штиль" else None,
-                        cloudiness_score=cloudiness if cloudiness else None,
-                        sunshine_hours=sunshine_hours if sunshine_hours else None,
                         pressure_hpa=pressure if pressure else None,
-                        weather_phenomena=", ".join(weather_phenomena) if weather_phenomena else None,
                         notes=notes if notes else None
+                        # Примечание: cloudiness_score, sunshine_hours, weather_phenomena отсутствуют в модели
                     )
                     db.add(weather)
                     db.commit()
