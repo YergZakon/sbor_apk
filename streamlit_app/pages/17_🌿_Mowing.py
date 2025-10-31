@@ -51,6 +51,17 @@ tab1, tab2 = st.tabs(["📝 Регистрация", "📊 История"])
 with tab1:
     st.subheader("Регистрация укоса")
 
+    # Загружаем список предыдущих укосов ДО формы (для возможности связывания pickup с mowing)
+    all_prev_mowings = db.query(Operation, MowingDetails, Field).join(
+        MowingDetails, Operation.id == MowingDetails.operation_id
+    ).join(
+        Field, Operation.field_id == Field.id
+    ).filter(
+        Operation.operation_type == "mowing",
+        MowingDetails.harvest_phase == "mowing",
+        Field.farm_id == farm.id
+    ).order_by(Operation.operation_date.desc()).all()
+
     with st.form("mowing_form"):
         col1, col2 = st.columns(2)
 
@@ -96,24 +107,22 @@ with tab1:
 
             harvest_phase_code = "mowing" if harvest_phase == "Укос (скашивание)" else "pickup"
 
-            # Если это подбор, предложить выбрать операцию укоса для связи
+            # Если это подбор, предлагаем выбрать связанную операцию укоса
             linked_operation_id = None
-            if harvest_phase_code == "pickup":
-                # Находим операции укоса на этом поле
-                prev_mowings = db.query(Operation, MowingDetails).join(MowingDetails).filter(
-                    Operation.field_id == selected_field.id,
-                    Operation.operation_type == "mowing",
-                    MowingDetails.harvest_phase == "mowing",
-                    MowingDetails.mowing_number == mowing_number
-                ).all()
+            if harvest_phase_code == "pickup" and all_prev_mowings:
+                # Фильтруем укосы по выбранному полю и номеру укоса
+                filtered_mowings = [
+                    (op, md, f) for op, md, f in all_prev_mowings
+                    if f.id == selected_field.id and md.mowing_number == mowing_number
+                ]
 
-                if prev_mowings:
+                if filtered_mowings:
                     prev_options = {
-                        f"{op.operation_date.strftime('%Y-%m-%d')} - {md.crop} (укос {md.mowing_number})": op.id
-                        for op, md in prev_mowings
+                        f"{op.operation_date.strftime('%Y-%m-%d')} - {md.crop}": op.id
+                        for op, md, f in filtered_mowings
                     }
                     selected_prev = st.selectbox(
-                        "Связанный укос",
+                        "Связанный укос (опционально)",
                         options=["Не указан"] + list(prev_options.keys()),
                         help="Выберите операцию укоса, валки которой подбираете"
                     )
