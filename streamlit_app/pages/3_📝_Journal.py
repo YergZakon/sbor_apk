@@ -116,6 +116,24 @@ try:
     # ПОЛУЧЕНИЕ ДАННЫХ С ФИЛЬТРАЦИЕЙ
     # ============================================================================
 
+    # DEBUG: Show current farm info
+    with st.expander("🔍 Отладочная информация", expanded=False):
+        st.write(f"**Текущее хозяйство ID:** {farm.id}")
+        st.write(f"**Название хозяйства:** {farm.name}")
+        st.write(f"**БИН:** {farm.bin}")
+
+        # Count total operations and fields
+        total_ops = db.query(Operation).count()
+        total_fields = db.query(Field).count()
+        farm_fields = db.query(Field).filter(Field.farm_id == farm.id).count()
+        st.write(f"**Всего операций в БД:** {total_ops}")
+        st.write(f"**Всего полей в БД:** {total_fields}")
+        st.write(f"**Полей у хозяйства:** {farm_fields}")
+
+        # Check operations with farm_id
+        ops_with_farm = db.query(Operation).filter(Operation.farm_id == farm.id).count()
+        st.write(f"**Операций с farm_id={farm.id}:** {ops_with_farm}")
+
     # Базовый запрос
     query = db.query(
         Operation.id,
@@ -128,7 +146,7 @@ try:
         Operation.area_processed_ha,
         Operation.operator,
         Operation.notes
-    ).join(Field)
+    ).join(Field, Operation.field_id == Field.id)
 
     # КРИТИЧЕСКИЙ ФИЛЬТР: только операции из полей текущего хозяйства
     query = query.filter(Field.farm_id == farm.id)
@@ -151,6 +169,22 @@ try:
 
     # Выполнение запроса
     operations = query.all()
+
+    # DEBUG: Show more query details
+    with st.expander("🔍 Отладочная информация (продолжение)", expanded=False):
+        st.write(f"**Найдено операций после JOIN:** {len(operations)}")
+
+        # Show sample operations without join
+        sample_ops = db.query(Operation).filter(Operation.farm_id == farm.id).limit(5).all()
+        if sample_ops:
+            st.write("**Примеры операций с farm_id в БД:**")
+            for op in sample_ops:
+                field = db.query(Field).filter(Field.id == op.field_id).first()
+                st.write(f"- ID: {op.id}, Тип: {op.operation_type}, Дата: {op.operation_date}, Field ID: {op.field_id}, Field farm_id: {field.farm_id if field else 'N/A'}")
+
+        # Check if there are operations with null farm_id
+        ops_null_farm = db.query(Operation).filter(Operation.farm_id == None).count()
+        st.write(f"**Операций с farm_id=NULL:** {ops_null_farm}")
 
     # ============================================================================
     # ОТОБРАЖЕНИЕ ДАННЫХ
