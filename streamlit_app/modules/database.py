@@ -179,6 +179,7 @@ class Operation(Base):
     irrigation_details = relationship("IrrigationDetails", back_populates="operation", uselist=False)
     snow_retention_details = relationship("SnowRetentionDetails", back_populates="operation", uselist=False)
     fallow_details = relationship("FallowDetails", back_populates="operation", uselist=False)
+    mowing_details = relationship("MowingDetails", back_populates="operation", uselist=False, foreign_keys="MowingDetails.operation_id")
 
 
 class SowingDetail(Base):
@@ -587,6 +588,28 @@ class FallowDetails(Base):
 
     # Relationships
     operation = relationship("Operation", back_populates="fallow_details")
+
+
+class MowingDetails(Base):
+    """Детали укоса (многолетние травы)"""
+    __tablename__ = "mowing_details"
+
+    id = Column(Integer, primary_key=True, index=True)
+    operation_id = Column(Integer, ForeignKey("operations.id"), nullable=False, unique=True)
+    crop = Column(String(100))  # Культура (люцерна, эспарцет и т.д.)
+    mowing_number = Column(Integer)  # Номер укоса (1, 2, 3)
+    yield_green_mass_t_ha = Column(Float)  # Урожайность зеленой массы т/га
+    yield_hay_t_ha = Column(Float)  # Урожайность сена т/га (после сушки)
+    moisture_pct = Column(Float)  # Влажность при укосе
+    quality_class = Column(String(20))  # Класс качества (1, 2, 3)
+    harvest_phase = Column(String(20))  # mowing (укос) или pickup (подбор)
+    linked_operation_id = Column(Integer, ForeignKey("operations.id"))  # Связь фаза 1 → фаза 2
+    plant_height_cm = Column(Float)  # Высота растений при укосе
+    stubble_height_cm = Column(Float)  # Высота среза
+
+    # Relationships
+    operation = relationship("Operation", back_populates="mowing_details", foreign_keys=[operation_id])
+    linked_operation = relationship("Operation", foreign_keys=[linked_operation_id])
 
 
 # ============================================================================
