@@ -161,7 +161,11 @@ with tab1:
 with tab2:
     st.subheader("История орошений")
 
-    operations = db.query(Operation, Field, IrrigationDetails).join(Field).outerjoin(IrrigationDetails).filter(
+    operations = db.query(Operation, Field, IrrigationDetails).join(
+        Field, Operation.field_id == Field.id
+    ).outerjoin(
+        IrrigationDetails, Operation.id == IrrigationDetails.operation_id
+    ).filter(
         Operation.operation_type == "irrigation", Field.farm_id == farm.id
     ).order_by(Operation.operation_date.desc()).all()
 

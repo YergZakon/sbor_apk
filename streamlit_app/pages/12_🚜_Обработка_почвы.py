@@ -375,7 +375,11 @@ with tab2:
         TillageDetails.tillage_type,
         TillageDetails.depth_cm,
         TillageDetails.tillage_purpose
-    ).join(Field).outerjoin(TillageDetails).filter(
+    ).join(
+        Field, Operation.field_id == Field.id
+    ).outerjoin(
+        TillageDetails, Operation.id == TillageDetails.operation_id
+    ).filter(
         Operation.operation_type == "tillage",
         Field.farm_id == farm.id
     ).order_by(Operation.operation_date.desc()).all()

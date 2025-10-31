@@ -203,7 +203,11 @@ with tab1:
 with tab2:
     st.subheader("История десикаций")
 
-    operations = db.query(Operation, Field, DesiccationDetails).join(Field).outerjoin(DesiccationDetails).filter(
+    operations = db.query(Operation, Field, DesiccationDetails).join(
+        Field, Operation.field_id == Field.id
+    ).outerjoin(
+        DesiccationDetails, Operation.id == DesiccationDetails.operation_id
+    ).filter(
         Operation.operation_type == "desiccation", Field.farm_id == farm.id
     ).order_by(Operation.operation_date.desc()).all()
 

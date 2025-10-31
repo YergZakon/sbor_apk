@@ -165,7 +165,11 @@ with tab1:
 with tab2:
     st.subheader("История снегозадержания")
 
-    operations = db.query(Operation, Field, SnowRetentionDetails).join(Field).outerjoin(SnowRetentionDetails).filter(
+    operations = db.query(Operation, Field, SnowRetentionDetails).join(
+        Field, Operation.field_id == Field.id
+    ).outerjoin(
+        SnowRetentionDetails, Operation.id == SnowRetentionDetails.operation_id
+    ).filter(
         Operation.operation_type == "snow_retention", Field.farm_id == farm.id
     ).order_by(Operation.operation_date.desc()).all()
 

@@ -583,7 +583,11 @@ try:
         Operation.area_processed_ha,
         SowingDetail.seeding_rate_kg_ha,
         SowingDetail.seeding_depth_cm
-    ).join(Field).outerjoin(SowingDetail).filter(
+    ).join(
+        Field, Operation.field_id == Field.id
+    ).outerjoin(
+        SowingDetail, Operation.id == SowingDetail.operation_id
+    ).filter(
         Operation.operation_type == "sowing",
         Field.farm_id == farm.id  # КРИТИЧЕСКИЙ ФИЛЬТР: только операции текущего хозяйства
     ).order_by(Operation.operation_date.desc()).all()

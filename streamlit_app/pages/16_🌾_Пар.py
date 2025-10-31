@@ -165,7 +165,11 @@ with tab1:
 with tab2:
     st.subheader("История обработки паров")
 
-    operations = db.query(Operation, Field, FallowDetails).join(Field).outerjoin(FallowDetails).filter(
+    operations = db.query(Operation, Field, FallowDetails).join(
+        Field, Operation.field_id == Field.id
+    ).outerjoin(
+        FallowDetails, Operation.id == FallowDetails.operation_id
+    ).filter(
         Operation.operation_type == "fallow", Field.farm_id == farm.id
     ).order_by(Operation.operation_date.desc()).all()
 
