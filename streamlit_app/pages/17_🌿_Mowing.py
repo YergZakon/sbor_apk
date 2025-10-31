@@ -304,7 +304,9 @@ with tab1:
 with tab2:
     st.subheader("История укосов")
 
-    operations = db.query(Operation, Field, MowingDetails).join(Field).outerjoin(MowingDetails).filter(
+    operations = db.query(Operation, Field, MowingDetails).join(Field).outerjoin(
+        MowingDetails, Operation.id == MowingDetails.operation_id
+    ).filter(
         Operation.operation_type == "mowing",
         Field.farm_id == farm.id
     ).order_by(Operation.operation_date.desc()).all()
