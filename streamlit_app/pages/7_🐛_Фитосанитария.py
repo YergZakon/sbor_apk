@@ -26,7 +26,7 @@ from modules.auth import (
 )
 from modules.validators import DataValidator
 from utils.formatters import format_date, format_area
-from utils.reference_loader import load_diseases, load_pests, load_weeds
+from utils.reference_loader import load_diseases, load_pests, load_weeds, load_crops
 
 # Настройка страницы
 st.set_page_config(page_title="Фитосанитария", page_icon="🐛", layout="wide")
@@ -45,6 +45,7 @@ validator = DataValidator()
 diseases_ref = load_diseases()
 pests_ref = load_pests()
 weeds_ref = load_weeds()
+crops_ref = load_crops()
 
 # Подключение к БД
 db = next(get_db())
@@ -105,11 +106,19 @@ with tab1:
             )
 
         with col2:
-            # Культура
-            crop = st.text_input(
-                "Культура *",
-                help="Какая культура растет на поле"
-            )
+            # Культура - выбор из справочника
+            crop_options = list(crops_ref.keys()) if crops_ref else []
+            if crop_options:
+                crop = st.selectbox(
+                    "Культура *",
+                    options=crop_options,
+                    help="Выберите культуру из справочника"
+                )
+            else:
+                crop = st.text_input(
+                    "Культура *",
+                    help="Введите название культуры (справочник не загружен)"
+                )
 
             # Фаза развития
             growth_stage = st.selectbox(
@@ -299,6 +308,7 @@ with tab1:
                     monitoring = PhytosanitaryMonitoring(
                         field_id=selected_field.id,
                         inspection_date=monitoring_date,
+                        crop_name=crop if crop else None,
                         pest_type=problem_type,
                         pest_name=problem_name,
                         severity_pct=affected_area_percent,
@@ -384,6 +394,7 @@ with tab2:
             data.append({
                 "Дата": format_date(mon.inspection_date),
                 "Поле": f"{field.field_code} - {field.name}",
+                "Культура": mon.crop_name or "-",
                 "Фаза": mon.crop_stage or "-",
                 "Тип": mon.pest_type,
                 "Проблема": mon.pest_name,

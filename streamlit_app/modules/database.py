@@ -423,6 +423,7 @@ class PhytosanitaryMonitoring(Base):
     id = Column(Integer, primary_key=True, index=True)
     field_id = Column(Integer, ForeignKey("fields.id"), nullable=False)
     inspection_date = Column(Date, nullable=False)
+    crop_name = Column(String(100))  # название культуры
     pest_type = Column(String(50), nullable=False)  # disease, pest, weed
     pest_name = Column(String(200), nullable=False)
     latin_name = Column(String(200))
