@@ -220,8 +220,10 @@ with tab1:
         st.markdown("---")
         st.markdown("### 🚜 Техника для уборки")
 
-        # Получение списка комбайнов
+        # Получение списка комбайнов и агрегатов
         machinery_list = filter_query_by_farm(db.query(Machinery).filter(Machinery.status == 'active'), Machinery).all()
+        implements_list = filter_query_by_farm(db.query(Implements).filter(Implements.status == 'active'), Implements).all()
+
         combines = [m for m in machinery_list if m.machinery_type == 'combine']
 
         # Pre-load machinery attributes
@@ -243,7 +245,7 @@ with tab1:
                 if ref_key in combines_ref:
                     machinery_details[display_text] = combines_ref[ref_key]
 
-        col_tech1, col_tech2 = st.columns(2)
+        col_tech1, col_tech2, col_tech3 = st.columns(3)
 
         with col_tech1:
             selected_machinery_display = st.selectbox(
@@ -272,6 +274,47 @@ with tab1:
                 machine_year = None
 
         with col_tech2:
+            # Селектор жатки/хедера
+            headers = [impl for impl in implements_list if impl.implement_type in ['header', 'picker']]
+            implement_options = {}
+            if headers:
+                for i in headers:
+                    display_text = f"{i.brand or ''} {i.model} ({i.working_width_m or '-'}м)"
+                    implement_options[display_text] = (i.id, i.year)
+
+            selected_implement_display = st.selectbox(
+                "Жатка/Хедер",
+                options=["Не выбрано"] + list(implement_options.keys()),
+                help="Выберите жатку или хедер (опционально)",
+                key="harvest_implement"
+            )
+
+            if selected_implement_display != "Не выбрано":
+                selected_implement_id, implement_year = implement_options[selected_implement_display]
+            else:
+                selected_implement_id = None
+                implement_year = None
+
+        with col_tech3:
+            # Способ уборки
+            harvest_method = st.selectbox(
+                "Способ уборки",
+                options=[
+                    "Прямое комбайнирование",
+                    "Подбор валков (двухфазная)",
+                    "Другое"
+                ],
+                help="Способ уборки урожая",
+                key="harvest_method"
+            )
+
+            # Преобразуем в код для БД
+            harvest_method_code = {
+                "Прямое комбайнирование": "direct_combining",
+                "Подбор валков (двухфазная)": "swath_pickup",
+                "Другое": "other"
+            }.get(harvest_method, "direct_combining")
+
             work_speed_kmh = st.number_input(
                 "Рабочая скорость (км/ч)",
                 min_value=0.0,
@@ -407,6 +450,11 @@ with tab1:
             else:
                 try:
                     # Создаем операцию
+                    # Добавляем информацию о способе уборки в примечания
+                    harvest_notes = f"Способ уборки: {harvest_method}"
+                    if notes:
+                        harvest_notes = f"{harvest_notes}\n{notes}"
+
                     operation = Operation(
                         farm_id=farm.id,
                         field_id=selected_field.id,
@@ -415,9 +463,11 @@ with tab1:
                         end_date=end_date if end_date else None,
                         area_processed_ha=area_harvested,
                         machine_id=selected_machinery_id,
+                        implement_id=selected_implement_id,  # Добавлен implement (жатка/хедер)
                         machine_year=machine_year,
+                        implement_year=implement_year if selected_implement_id else None,  # Добавлен год агрегата
                         work_speed_kmh=work_speed_kmh if work_speed_kmh else None,
-                        notes=notes
+                        notes=harvest_notes
                     )
                     db.add(operation)
                     db.flush()
