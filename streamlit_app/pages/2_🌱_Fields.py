@@ -146,27 +146,26 @@ try:
                 help="Опционально: кадастровый номер участка"
             )
 
-            st.markdown("#### Координаты (опционально)")
+            with st.expander("📍 Координаты (опционально)", expanded=False):
+                center_lat = st.number_input(
+                    "Широта",
+                    min_value=40.0,
+                    max_value=56.0,
+                    value=51.1801,
+                    step=0.0001,
+                    format="%.4f",
+                    help="GPS координата центра поля"
+                )
 
-            center_lat = st.number_input(
-                "Широта",
-                min_value=40.0,
-                max_value=56.0,
-                value=51.1801,
-                step=0.0001,
-                format="%.4f",
-                help="GPS координата центра поля"
-            )
-
-            center_lon = st.number_input(
-                "Долгота",
-                min_value=46.0,
-                max_value=88.0,
-                value=71.4460,
-                step=0.0001,
-                format="%.4f",
-                help="GPS координата центра поля"
-            )
+                center_lon = st.number_input(
+                    "Долгота",
+                    min_value=46.0,
+                    max_value=88.0,
+                    value=71.4460,
+                    step=0.0001,
+                    format="%.4f",
+                    help="GPS координата центра поля"
+                )
 
         with col2:
             st.markdown("#### Характеристики почвы")
@@ -193,52 +192,51 @@ try:
                 "Уклон (градусы)",
                 min_value=0.0,
                 max_value=45.0,
-                value=0.0,
+                value=None,
                 step=0.1,
                 help="Степень уклона поля"
             )
 
-            st.markdown("#### Агрохимические показатели (опционально)")
+            with st.expander("🧪 Агрохимические показатели (опционально)", expanded=False):
+                col2_1, col2_2 = st.columns(2)
 
-            col2_1, col2_2 = st.columns(2)
+                with col2_1:
+                    ph_water = st.number_input(
+                        "pH водный",
+                        min_value=4.0,
+                        max_value=9.5,
+                        value=6.5,
+                        step=0.1,
+                        help="pH почвы (водная вытяжка)"
+                    )
 
-            with col2_1:
-                ph_water = st.number_input(
-                    "pH водный",
-                    min_value=4.0,
-                    max_value=9.5,
-                    value=6.5,
-                    step=0.1,
-                    help="pH почвы (водная вытяжка)"
-                )
+                    humus_pct = st.number_input(
+                        "Гумус (%)",
+                        min_value=0.1,
+                        max_value=12.0,
+                        value=3.0,
+                        step=0.1,
+                        help="Содержание гумуса в процентах"
+                    )
 
-                humus_pct = st.number_input(
-                    "Гумус (%)",
-                    min_value=0.1,
-                    max_value=12.0,
-                    value=3.0,
-                    step=0.1,
-                    help="Содержание гумуса в процентах"
-                )
+                with col2_2:
+                    p2o5_mg_kg = st.number_input(
+                        "P2O5 (мг/кг)",
+                        min_value=0.0,
+                        max_value=500.0,
+                        value=50.0,
+                        step=1.0,
+                        help="Подвижный фосфор"
+                    )
 
-            with col2_2:
-                p2o5_mg_kg = st.number_input(
-                    "P2O5 (мг/кг)",
-                    min_value=0.0,
-                    max_value=500.0,
-                    value=50.0,
-                    step=1.0,
-                    help="Подвижный фосфор"
-                )
-
-                k2o_mg_kg = st.number_input(
-                    "K2O (мг/кг)",
-                    min_value=0.0,
-                    max_value=1000.0,
-                    value=150.0,
-                    step=1.0,
-                    help="Обменный калий"
-                )
+                    k2o_mg_kg = st.number_input(
+                        "K2O (мг/кг)",
+                        min_value=0.0,
+                        max_value=1000.0,
+                        value=150.0,
+                        step=1.0,
+                        help="Обменный калий"
+                    )
 
         # Кнопка отправки
         submitted = st.form_submit_button("Добавить поле", use_container_width=True, type="primary")

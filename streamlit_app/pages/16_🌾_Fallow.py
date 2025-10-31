@@ -58,23 +58,10 @@ with tab1:
             operation_date = st.date_input("Дата *", value=date.today())
             end_date = st.date_input("Дата окончания", value=None)
 
-            fallow_type = st.selectbox(
-                "Тип пара *",
-                ['black', 'early', 'green', 'cultivated'],
-                format_func=lambda x: {
-                    'black': 'Чистый пар',
-                    'early': 'Ранний пар',
-                    'green': 'Зеленый пар',
-                    'cultivated': 'Обработанный пар'
-                }[x]
-            )
-
         with col2:
             area_processed = st.number_input("Площадь (га) *", min_value=0.1, max_value=selected_field.area_ha, value=selected_field.area_ha, step=0.1)
 
             processing_depth_cm = st.number_input("Глубина обработки (см)", min_value=0.0, value=None, step=1.0, help="Глубина обработки паровых полей")
-
-            number_of_treatments = st.number_input("Количество обработок", min_value=1, value=1, step=1, help="Количество обработок паровых полей")
 
         st.markdown("---")
         st.markdown("### 🚜 Техника")
@@ -163,8 +150,8 @@ with tab1:
                 db.flush()
 
                 fallow_details = FallowDetails(
-                    operation_id=operation.id, fallow_type=fallow_type,
-                    processing_depth_cm=processing_depth_cm, number_of_treatments=number_of_treatments
+                    operation_id=operation.id, fallow_type=None,
+                    processing_depth_cm=processing_depth_cm, number_of_treatments=None
                 )
                 db.add(fallow_details)
                 db.commit()

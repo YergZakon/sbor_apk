@@ -58,23 +58,10 @@ with tab1:
             operation_date = st.date_input("Дата *", value=date.today())
             end_date = st.date_input("Дата окончания", value=None)
 
-            method = st.selectbox(
-                "Метод *",
-                ['snow_plowing', 'barriers', 'vegetation', 'other'],
-                format_func=lambda x: {
-                    'snow_plowing': 'Снегопахание (валкование)',
-                    'barriers': 'Установка щитов/кулис',
-                    'vegetation': 'Растительные кулисы',
-                    'other': 'Другое'
-                }[x]
-            )
-
         with col2:
             area_processed = st.number_input("Площадь (га) *", min_value=0.1, max_value=selected_field.area_ha, value=selected_field.area_ha, step=0.1)
 
             snow_depth_cm = st.number_input("Глубина снега (см)", min_value=0.0, value=None, step=1.0, help="Глубина снежного покрова")
-
-            number_of_passes = st.number_input("Количество проходов", min_value=1, value=1, step=1, help="Количество проходов снегопаха")
 
         st.markdown("---")
         st.markdown("### 🚜 Техника")
@@ -163,8 +150,8 @@ with tab1:
                 db.flush()
 
                 snow_retention_details = SnowRetentionDetails(
-                    operation_id=operation.id, method=method,
-                    snow_depth_cm=snow_depth_cm, number_of_passes=number_of_passes
+                    operation_id=operation.id, method=None,
+                    snow_depth_cm=snow_depth_cm, number_of_passes=None
                 )
                 db.add(snow_retention_details)
                 db.commit()
