@@ -11,6 +11,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from modules.database import get_db, Farm, Field, Operation, DesiccationDetails, Machinery, Implements
 from modules.auth import require_auth, require_farm_binding, filter_query_by_farm, get_user_display_name, get_current_user, is_admin
+from utils.reference_loader import load_pesticides, load_tractors
 
 st.set_page_config(page_title="Десикация", page_icon="💧", layout="wide")
 require_auth()
@@ -21,15 +22,9 @@ st.caption(f"Пользователь: **{get_user_display_name()}**")
 
 db = next(get_db())
 
-# Загрузка справочника тракторов
-tractors_ref = {}
-try:
-    tractors_path = Path('data/tractors.json')
-    if tractors_path.exists():
-        with open(tractors_path, 'r', encoding='utf-8') as f:
-            tractors_ref = json.load(f)
-except Exception as e:
-    pass  # Справочник опционален
+# Загрузка справочников через универсальный загрузчик
+pesticides_ref = load_pesticides()
+tractors_ref = load_tractors()
 
 user = get_current_user()
 farm = db.query(Farm).first() if is_admin() else db.query(Farm).filter(Farm.id == user.get("farm_id")).first()
@@ -58,8 +53,35 @@ with tab1:
             operation_date = st.date_input("Дата *", value=date.today())
             end_date = st.date_input("Дата окончания", value=None)
 
-            product_name = st.text_input("Препарат *", placeholder="Например: Раундап")
-            active_ingredient = st.text_input("Действующее вещество", placeholder="Например: Глифосат")
+            # Селектор десиканта из справочника
+            if pesticides_ref and "Десиканты" in pesticides_ref:
+                desiccant_names = list(pesticides_ref["Десиканты"].keys())
+                product_name = st.selectbox(
+                    "Препарат *",
+                    options=desiccant_names,
+                    help="Выберите десикант из справочника"
+                )
+
+                # Автозаполнение действующего вещества
+                if product_name:
+                    desiccant_data = pesticides_ref["Десиканты"].get(product_name, {})
+                    active_ingredient_auto = desiccant_data.get("действующее_вещество", "")
+                    active_ingredient = st.text_input(
+                        "Действующее вещество",
+                        value=active_ingredient_auto,
+                        help="Действующее вещество препарата"
+                    )
+
+                    # Показываем дополнительную информацию
+                    if desiccant_data:
+                        recommended_rate = desiccant_data.get("норма_применения", "")
+                        if recommended_rate:
+                            st.caption(f"💡 Рекомендуемая норма: {recommended_rate}")
+                else:
+                    active_ingredient = st.text_input("Действующее вещество", placeholder="Например: Глифосат")
+            else:
+                product_name = st.text_input("Препарат *", placeholder="Например: Раундап")
+                active_ingredient = st.text_input("Действующее вещество", placeholder="Например: Глифосат")
 
         with col2:
             area_processed = st.number_input("Площадь (га) *", min_value=0.1, max_value=selected_field.area_ha, value=selected_field.area_ha, step=0.1)

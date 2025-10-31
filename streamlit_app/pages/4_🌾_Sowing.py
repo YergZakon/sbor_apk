@@ -21,7 +21,7 @@ from modules.auth import (
 )
 from modules.validators import validator
 from modules.config import settings
-from utils.reference_loader import load_crops, load_tractors
+from utils.reference_loader import load_crops, load_tractors, load_reference
 
 # Настройка страницы
 st.set_page_config(page_title="Посев", page_icon="🌾", layout="wide")
@@ -40,6 +40,7 @@ db = SessionLocal()
 # Загрузка справочников через универсальный загрузчик
 crops_reference = load_crops()
 tractors_ref = load_tractors()
+seed_treatments_ref = load_reference('seed_treatments.json', show_error=False)
 
 try:
     # Проверка наличия хозяйства
@@ -221,11 +222,26 @@ try:
             )
 
         with col4:
-            seed_treatment = st.text_input(
-                "Протравитель",
-                placeholder="Например: Витавакс",
-                help="Препарат для протравливания семян"
-            )
+            if seed_treatments_ref:
+                seed_treatment_options = ["Не указан"] + list(seed_treatments_ref.keys())
+                seed_treatment = st.selectbox(
+                    "Протравитель",
+                    options=seed_treatment_options,
+                    help="Препарат для протравливания семян"
+                )
+
+                # Показываем информацию о выбранном протравителе
+                if seed_treatment and seed_treatment != "Не указан":
+                    treatment_data = seed_treatments_ref.get(seed_treatment, {})
+                    if treatment_data:
+                        st.caption(f"🧪 {treatment_data.get('действующее_вещество', '-')}")
+                        st.caption(f"📊 Норма: {treatment_data.get('норма_применения', '-')}")
+            else:
+                seed_treatment = st.text_input(
+                    "Протравитель",
+                    placeholder="Например: Витавакс",
+                    help="Препарат для протравливания семян"
+                )
 
         st.markdown("---")
         st.markdown("#### 🌾 Семенной материал")

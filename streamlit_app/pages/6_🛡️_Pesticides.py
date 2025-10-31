@@ -26,7 +26,7 @@ from modules.auth import (
 )
 from modules.validators import DataValidator
 from utils.formatters import format_date, format_area, format_number
-from utils.reference_loader import load_pesticides, load_tractors
+from utils.reference_loader import load_pesticides, load_tractors, load_reference, load_crops
 
 # Настройка страницы
 st.set_page_config(page_title="СЗР", page_icon="🛡️", layout="wide")
@@ -44,6 +44,8 @@ validator = DataValidator()
 # Загрузка справочников через универсальный загрузчик
 pesticides_ref = load_pesticides()
 tractors_ref = load_tractors()
+growth_stages_ref = load_reference('growth_stages.json', show_error=False)
+crops_reference = load_crops()
 
 # Подключение к БД
 db = next(get_db())
@@ -170,12 +172,56 @@ with tab1:
                 help="Способ применения препарата"
             )
 
+            # Культура (для определения фазы развития)
+            if crops_reference:
+                crop_for_stage = st.selectbox(
+                    "Культура",
+                    options=["Не указана"] + list(crops_reference.keys()),
+                    help="Выберите культуру для определения фазы развития"
+                )
+            else:
+                crop_for_stage = None
+
             # Фаза развития культуры
-            growth_stage = st.text_input(
-                "Фаза развития культуры",
-                placeholder="Например: кущение, выход в трубку",
-                help="Фаза развития культуры в момент обработки"
-            )
+            if growth_stages_ref and crop_for_stage and crop_for_stage != "Не указана":
+                # Определяем группу культуры
+                growth_stage_group = None
+                for group_name, group_data in growth_stages_ref.items():
+                    if crop_for_stage in group_data.get("культуры", []):
+                        growth_stage_group = group_name
+                        break
+
+                # Если не нашли точное совпадение, используем универсальные фазы
+                if not growth_stage_group:
+                    growth_stage_group = "Универсальные"
+
+                # Получаем список фаз для группы
+                if growth_stage_group in growth_stages_ref:
+                    stage_options = ["Не указано"] + list(growth_stages_ref[growth_stage_group]["фазы"].keys())
+                    growth_stage = st.selectbox(
+                        "Фаза развития культуры",
+                        options=stage_options,
+                        help="Фаза развития культуры в момент обработки"
+                    )
+
+                    # Показываем информацию о выбранной фазе
+                    if growth_stage and growth_stage != "Не указано":
+                        stage_data = growth_stages_ref[growth_stage_group]["фазы"].get(growth_stage, {})
+                        if stage_data:
+                            st.caption(f"📅 {stage_data.get('период', '-')}")
+                            st.caption(f"ℹ️ {stage_data.get('описание', '-')}")
+                else:
+                    growth_stage = st.text_input(
+                        "Фаза развития культуры",
+                        placeholder="Например: кущение, выход в трубку",
+                        help="Фаза развития культуры в момент обработки"
+                    )
+            else:
+                growth_stage = st.text_input(
+                    "Фаза развития культуры",
+                    placeholder="Например: кущение, выход в трубку",
+                    help="Фаза развития культуры в момент обработки"
+                )
 
         # Расчет потребности в препарате и воде
         st.markdown("---")
