@@ -149,7 +149,7 @@ class Operation(Base):
     id = Column(Integer, primary_key=True, index=True)
     farm_id = Column(Integer, ForeignKey("farms.id"), nullable=False)  # Добавлено farm_id
     field_id = Column(Integer, ForeignKey("fields.id"), nullable=False)
-    operation_type = Column(String(50), nullable=False)  # sowing, fertilizing, spraying, harvest, soil_analysis, desiccation, tillage, irrigation, snow_retention, fallow
+    operation_type = Column(String(50), nullable=False)  # sowing, fertilizing, spraying, harvest, soil_analysis, desiccation, tillage, irrigation, snow_retention, fallow, mowing
     operation_date = Column(Date, nullable=False)
     end_date = Column(Date)  # Дата окончания операции (для многодневных работ)
     crop = Column(String(100))
