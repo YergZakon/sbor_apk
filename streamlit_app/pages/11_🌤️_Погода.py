@@ -340,7 +340,7 @@ with tab2:
 
         col1, col2, col3, col4 = st.columns(4)
 
-        avg_temp = sum(w.temp_avg_c for w in weather_records) / len(weather_records)
+        avg_temp = sum(w.temp_air_c for w in weather_records if w.temp_air_c) / len(weather_records)
         total_precip = sum(w.precipitation_mm for w in weather_records)
         max_temp_record = max(w.temp_max_c for w in weather_records)
         min_temp_record = min(w.temp_min_c for w in weather_records)
@@ -435,9 +435,9 @@ with tab3:
         """)
 
         # СЭТ выше 5°C
-        set_5 = sum(max(0, w.temp_avg_c - 5) for w in all_weather)
+        set_5 = sum(max(0, w.temp_air_c - 5) for w in all_weather if w.temp_air_c)
         # СЭТ выше 10°C
-        set_10 = sum(max(0, w.temp_avg_c - 10) for w in all_weather)
+        set_10 = sum(max(0, w.temp_air_c - 10) for w in all_weather if w.temp_air_c)
 
         col1, col2 = st.columns(2)
 
