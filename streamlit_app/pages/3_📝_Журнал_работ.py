@@ -317,15 +317,15 @@ try:
 
         with col1:
             if st.button("🌾 Добавить посев", use_container_width=True):
-                st.switch_page("pages/4_🌾_Sowing.py")
+                st.switch_page("pages/4_🌾_Посев.py")
 
         with col2:
             if st.button("💊 Внести удобрения", use_container_width=True):
-                st.switch_page("pages/5_💊_Fertilizers.py")
+                st.switch_page("pages/5_💊_Удобрения.py")
 
         with col3:
             if st.button("🛡️ Опрыскивание", use_container_width=True):
-                st.switch_page("pages/6_🛡️_Pesticides.py")
+                st.switch_page("pages/6_🛡️_СЗР.py")
 
     st.markdown("---")
 

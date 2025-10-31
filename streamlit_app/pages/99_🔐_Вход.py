@@ -41,16 +41,16 @@ try:
 
         with col1:
             if st.button("🏠 Dashboard", use_container_width=True):
-                st.switch_page("pages/1_🏠_Dashboard.py")
+                st.switch_page("pages/1_🏠_Панель_управления.py")
 
         with col2:
             if st.button("🌱 Поля", use_container_width=True):
-                st.switch_page("pages/2_🌱_Fields.py")
+                st.switch_page("pages/2_🌱_Поля.py")
 
         with col3:
             if current_user['role'] == 'admin':
                 if st.button("⚙️ Админка", use_container_width=True):
-                    st.switch_page("pages/98_⚙️_Admin.py")
+                    st.switch_page("pages/98_⚙️_Администрирование.py")
 
     else:
         # Страница входа
@@ -203,7 +203,7 @@ try:
                             # Перенаправление на Farm Setup для создания хозяйства
                             import time
                             time.sleep(2)
-                            st.switch_page("pages/0_🏢_Farm_Setup.py")
+                            st.switch_page("pages/0_🏢_Регистрация_хозяйства.py")
 
                         except Exception as e:
                             st.error(f"❌ Ошибка при регистрации: {str(e)}")

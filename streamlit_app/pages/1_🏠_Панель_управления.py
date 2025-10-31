@@ -286,19 +286,19 @@ try:
 
     with col1:
         if st.button("➕ Добавить поле", use_container_width=True):
-            st.switch_page("pages/2_🌱_Fields.py")
+            st.switch_page("pages/2_🌱_Поля.py")
 
     with col2:
         if st.button("📥 Импорт из Excel", use_container_width=True):
-            st.switch_page("pages/15_📥_Import.py")
+            st.switch_page("pages/15_📥_Импорт.py")
 
     with col3:
         if st.button("📝 Журнал операций", use_container_width=True):
-            st.switch_page("pages/3_📝_Journal.py")
+            st.switch_page("pages/3_📝_Журнал_работ.py")
 
     with col4:
         if st.button("🌾 Добавить посев", use_container_width=True):
-            st.switch_page("pages/4_🌾_Sowing.py")
+            st.switch_page("pages/4_🌾_Посев.py")
 
     st.markdown("---")
 

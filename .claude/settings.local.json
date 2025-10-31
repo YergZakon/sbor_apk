@@ -3,7 +3,9 @@
     "allow": [
       "Bash(python -m py_compile:*)",
       "Bash(git add:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(dir /S /B \"C:\\Users\\yergali\\Desktop\\fsai\\farm_data_system\\streamlit_app\")",
+      "Bash(git mv:*)"
     ],
     "deny": [],
     "ask": []

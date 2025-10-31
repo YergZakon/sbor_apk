@@ -32,7 +32,7 @@ def show_auth_widget():
 
         with col1:
             if st.button("👤 Профиль", key="sidebar_profile", use_container_width=True):
-                st.switch_page("pages/99_🔐_Login.py")
+                st.switch_page("pages/99_🔐_Вход.py")
 
         with col2:
             if st.button("🚪 Выход", key="sidebar_logout", use_container_width=True):
@@ -43,7 +43,7 @@ def show_auth_widget():
         if user.get('role') == 'admin':
             st.sidebar.markdown("---")
             if st.sidebar.button("⚙️ Админ-панель", key="sidebar_admin", use_container_width=True, type="primary"):
-                st.switch_page("pages/98_⚙️_Admin.py")
+                st.switch_page("pages/98_⚙️_Администрирование.py")
 
     else:
         # Пользователь не авторизован
@@ -51,7 +51,7 @@ def show_auth_widget():
         st.sidebar.warning("Вы не авторизованы")
 
         if st.sidebar.button("🔑 Войти", key="sidebar_login", use_container_width=True, type="primary"):
-            st.switch_page("pages/99_🔐_Login.py")
+            st.switch_page("pages/99_🔐_Вход.py")
 
         st.sidebar.caption("💡 Войдите для полного доступа")
 
@@ -82,6 +82,6 @@ def require_auth_with_message(custom_message: str = None):
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             if st.button("🔑 Перейти к странице входа", type="primary", use_container_width=True):
-                st.switch_page("pages/99_🔐_Login.py")
+                st.switch_page("pages/99_🔐_Вход.py")
 
         st.stop()
